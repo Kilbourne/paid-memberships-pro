@@ -119,7 +119,7 @@ class PMPro_Site_Health {
 				],
 				'pmpro-recorded-site-url' => [
 					'label' => __( 'Last Known Site URL', 'paid-memberships-pro' ),
-					'value' => pmpro_getOption( 'last_known_url' ),
+					'value' => get_option( 'pmpro_last_known_url' ),
 				],
 				'pmpro-pause-mode' => [
 					'label' => __( 'Pause Mode', 'paid-memberships-pro' ),
@@ -611,7 +611,7 @@ class PMPro_Site_Health {
 			],
 		];
 
-		$gateway = pmpro_getOption( 'gateway' );
+		$gateway = get_option( 'pmpro_gateway' );
 
 		if ( $gateway && isset( $gateway_specific_constants[ $gateway ] ) ) {
 			$constants = array_merge( $constants, $gateway_specific_constants[ $gateway ] );
