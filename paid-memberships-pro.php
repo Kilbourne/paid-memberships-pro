@@ -3,20 +3,20 @@
  * Plugin Name: Paid Memberships Pro
  * Plugin URI: https://www.paidmembershipspro.com
  * Description: The most complete member management and membership subscriptions plugin for WordPress.
- * Version: 2.12.10
+ * Version: 3.0.2
  * Author: Paid Memberships Pro
  * Author URI: https://www.paidmembershipspro.com
  * Text Domain: paid-memberships-pro
  * Domain Path: /languages
  */
 /**
- * Copyright 2011-2023	Stranger Studios
+ * Copyright 2011-2024	Stranger Studios
  * (email : info@paidmembershipspro.com)
  * GPLv2 Full license details in license.txt
  */
 
 // version constant
-define( 'PMPRO_VERSION', '2.12.10' );
+define( 'PMPRO_VERSION', '3.0.2' );
 define( 'PMPRO_USER_AGENT', 'Paid Memberships Pro v' . PMPRO_VERSION . '; ' . site_url() );
 define( 'PMPRO_MIN_PHP_VERSION', '5.6' );
 
@@ -63,10 +63,6 @@ require_once( PMPRO_DIR . '/classes/class-pmpro-members-list-table.php' ); // Me
 require_once( PMPRO_DIR . '/classes/class-pmpro-orders-list-table.php' ); // Orders List
 require_once( PMPRO_DIR . '/classes/class-pmpro-discount-code-list-table.php' ); // Discount Code List
 
-if ( version_compare( PHP_VERSION, '5.3.29', '>=' ) ) {
-	require_once( PMPRO_DIR . '/blocks/blocks.php' );             	// Gutenberg blocks
-}
-
 require_once( PMPRO_DIR . '/includes/services.php' );               // services loaded by AJAX and via webhook, etc
 require_once( PMPRO_DIR . '/includes/metaboxes.php' );              // metaboxes for dashboard
 require_once( PMPRO_DIR . '/includes/profile.php' );                // edit user/profile fields
@@ -104,6 +100,7 @@ require_once( PMPRO_DIR . '/shortcodes/pmpro_account.php' );        // [pmpro_ac
 require_once( PMPRO_DIR . '/shortcodes/pmpro_login.php' );          // [pmpro_login] shortcode to show a login form or logged in member info and menu.
 require_once( PMPRO_DIR . '/shortcodes/pmpro_member.php' );         // [pmpro_member] shortcode to show user fields
 require_once( PMPRO_DIR . '/shortcodes/pmpro_member_profile_edit.php' );         // [pmpro_member_profile_edit] shortcode to allow members to edit their profile
+require_once( PMPRO_DIR . '/includes/blocks.php' ); // Set up blocks.
 
 // load gateway
 require_once( PMPRO_DIR . '/classes/gateways/class.pmprogateway.php' ); // loaded by memberorder class when needed
@@ -169,7 +166,7 @@ define( 'PAYPAL_BN_CODE', 'PaidMembershipsPro_SP' );
 	Globals
 */
 global $gateway_environment;
-$gateway_environment = pmpro_getOption( 'gateway_environment' );
+$gateway_environment = get_option( 'pmpro_gateway_environment' );
 
 
 // Returns a list of all available gateway

@@ -196,7 +196,7 @@ class PMPro_Site_Health {
 	 * @return string The payment gateway information.
 	 */
 	public function get_gateway() {
-		$gateway  = pmpro_getOption( 'gateway' );
+		$gateway  = get_option( 'pmpro_gateway' );
 		$gateways = pmpro_gateways();
 
 		// Check if gateway is registered.
@@ -237,7 +237,7 @@ class PMPro_Site_Health {
 	 * @return string The payment gateway environment information.
 	 */
 	public function get_gateway_env() {
-		$environment  = pmpro_getOption( 'gateway_environment' );
+		$environment  = get_option( 'pmpro_gateway_environment' );
 		$environments = [
 			'sandbox' => __( 'Sandbox/Testing', 'paid-memberships-pro' ),
 			'live'    => __( 'Live/Production', 'paid-memberships-pro' ),
