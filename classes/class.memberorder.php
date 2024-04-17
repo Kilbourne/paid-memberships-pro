@@ -274,7 +274,7 @@
 		{
 
 			//set up the gateway
-			$this->setGateway(pmpro_getOption("gateway"));
+			$this->setGateway(get_option("pmpro_gateway"));
 
 			//set up the billing address structure
 			$this->billing = new stdClass();
