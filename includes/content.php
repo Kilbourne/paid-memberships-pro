@@ -25,7 +25,7 @@ function pmpro_has_membership_access($post_id = NULL, $user_id = NULL, $return_m
 	//use current user if no value is supplied
 	if(!$user_id)
 		$user_id = $current_user->ID;
-	
+
 	//if no post or current_user object, set them up
 	if(isset($queried_object->ID) && !empty($queried_object->ID) && $post_id == $queried_object->ID)
 		$mypost = $queried_object;
@@ -166,7 +166,15 @@ function pmpro_search_filter($query)
 		}
 	} else {
 		$query_var_post_types = array();
+/**
+ * Filter PMPro pages from search results.
+ * @since 3.0 This functionality was moved out
+ *        of the pmpro_search_filter function.
+ */
 	}
+/**
+ * Filter restricted posts from searches and archive queries.
+ */
 		
 	/**
 	 * Filter which post types to hide members-only content from search.
@@ -333,7 +341,7 @@ function pmpro_membership_content_filter( $content, $skipcheck = false ) {
 			//show excerpt
 			global $post;
 			if( $post->post_excerpt ) {
-				//defined exerpt
+				//defined excerpt
 				$content = wpautop( $post->post_excerpt );
 			} elseif(strpos($content, "<span id=\"more-" . $post->ID . "\"></span>") !== false) {
 				//more tag

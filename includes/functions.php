@@ -634,6 +634,20 @@ function pmpro_displayAds() {
 	return $pmpro_display_ads;
 }
 
+/**
+ * Get the next payment date for a user.
+ *
+ * This function will only return the next payment date for the subscription with
+ * the most recent start date. For this reason, it is not MMPU-compatible.
+ *
+ * @since unknown
+ *
+ * @param int|null $user_id      User ID. Defaults to the current user.
+ * @param string   $order_status If value passed in is not "success", will get next payment date for a cancelled subscription.
+ * @param string   $format       Date format to return.
+ *
+ * @return string|bool Date of next payment, or false if no subscription is found.
+ */
 function pmpro_next_payment( $user_id = null, $order_status = 'success', $format = 'timestamp' ) {
 	global $wpdb, $current_user;
 	if ( ! $user_id ) {
@@ -901,24 +915,29 @@ function pmpro_hasMembershipLevel( $levels = null, $user_id = null ) {
 }
 
 /**
- * Wrapper for pmpro_changeMembershipLevel to cancel one level.
+ * Remove a membership level from a user.
  *
  * @since 1.8.11
+ *
+ * @param int $level_id ID of the level to remove.
+ * @param int $user_id ID of the user to remove the level from.
+ * @param string $status Status to set the membership to.
+ *
+ * @return bool True if the level was removed, false otherwise.
  */
-function pmpro_cancelMembershipLevel( $cancel_level, $user_id = null, $old_level_status = 'inactive' ) {
 	return pmpro_changeMembershipLevel( 0, $user_id, $old_level_status, $cancel_level );
+function pmpro_cancelMembershipLevel( $level_id, $user_id = null, $status = 'inactive' ) {
 }
 
 /**
- * Create, add, remove or updates the membership level of the given user to the given level.
+ * Give a membership level to a user.
  *
- * $level may either be the ID or name of the desired membership_level.
  * If $user_id is omitted, the value will be retrieved from $current_user.
  *
  * @param int|array $level ID of level to set as new level, use 0 to cancel membership
  * @param int       $user_id ID of the user to change levels for
- * @param string    $old_level_status The status to set for the row in the memberships users table. (e.g. inactive, cancelled, admin_cancelled, expired) Defaults to 'inactive'.
- * @param int       $cancel_level If set cancel just this one level instead of all active levels (to support Multiple Memberships per User)
+ * @param string    $old_level_status Deprecated. The status to set for the row in the memberships users table. (e.g. inactive, cancelled, admin_cancelled, expired) Defaults to 'inactive'.
+ * @param int       $cancel_level Deprecated. If set cancel just this one level instead of all active levels (to support Multiple Memberships per User)
  *
  * @return bool|void
  * Return values:
@@ -2297,7 +2316,8 @@ function pmpro_are_any_visible_levels() {
 function pmpro_getLevelAtCheckout( $level_id = null, $discount_code = null ) {
 	global $pmpro_level, $wpdb, $post;
 
-	// reset pmpro_level
+
+	// Reset $pmpro_level global.
 	$pmpro_level = null;
 
 	// default to level passed in via URL
@@ -2568,7 +2588,7 @@ function pmpro_setMessage( $message, $type, $force = false ) {
 }
 
 /**
- * Show a a PMPro message set via pmpro_setMessage
+ * Show a PMPro message set via pmpro_setMessage
  *
  * @since 1.8.5
  */
@@ -2874,7 +2894,10 @@ function pmpro_show_setup_wizard_link() {
 		$show = false;
 	}
 
-	return $show;
+	/**
+	 * Filter to determine if the Setup Wizard link should show. Allows you to bypass whether or not to show the link.
+	 */
+	return apply_filters( 'pmpro_show_setup_wizard_link', $show );
 }
 
 /**
@@ -2900,14 +2923,6 @@ function pmpro_get_price_parts( $pmpro_invoice, $format = 'array' ) {
 		$pmpro_price_parts['tax'] = array(
 			'label' => __( 'Tax', 'paid-memberships-pro' ),
 			'value' => pmpro_escape_price( pmpro_formatPrice( $pmpro_invoice->tax ) ),
-		);
-	}
-
-	if ( ! empty( $pmpro_invoice->couponamount ) ) {
-		// We don't even use this but it is in the database so it could be shown here.
-		$pmpro_price_parts['couponamount'] = array(
-			'label' => __( 'Coupon', 'paid-memberships-pro' ),
-			'value' => pmpro_escape_price( pmpro_formatPrice( $pmpro_invoice->couponamount ) ),
 		);
 	}
 
@@ -3521,7 +3536,8 @@ function pmpro_getOrderStatuses( $force = false ) {
 
 	if ( ! isset( $pmpro_order_statuses ) || $force ) {
 		global $wpdb;
-		$default_statuses = array( '', 'success', 'cancelled', 'review', 'token', 'refunded', 'pending', 'error' );
+		$statuses         = array();
+		$default_statuses = array( '', 'success', 'review', 'token', 'refunded', 'pending', 'error' );
 		$used_statuses    = $wpdb->get_col( "SELECT DISTINCT(status) FROM $wpdb->pmpro_membership_orders" );
 		$statuses         = array_unique( array_merge( $default_statuses, $used_statuses ) );
 		asort( $statuses );
@@ -3908,7 +3924,7 @@ function pmpro_kses( $original_string, $context = 'email' ) {
 }
 
 /**
- * Replace last occurence of a string.
+ * Replace last occurrence of a string.
  * From: http://stackoverflow.com/a/3835653/1154321
  * @since 2.6
  */
@@ -4008,7 +4024,7 @@ function pmpro_kses_allowed_html( $allowed_html, $context ) {
 add_filter( 'wp_kses_allowed_html', 'pmpro_kses_allowed_html', 10, 2 );
 
 /**
- * Show deprecation warning if calling function was called publically.
+ * Show deprecation warning if calling function was called publicly.
  *
  * Useful for preparing to change method visibility from public to private.
  *
@@ -4021,14 +4037,14 @@ function pmpro_method_should_be_private( $deprecated_notice_version ) {
 	// Check whether the caller of this function is in the same file (class)
 	// as the caller of the previous function.
 	if ( $backtrace[0]['file'] !== $backtrace[1]['file'] ) {
-		_deprecated_function( $backtrace[1]['function'], $deprecated_notice_version );
+		_deprecated_function( esc_html( $backtrace[1]['function'] ), esc_html( $deprecated_notice_version ) );
 		return true;
 	}
 	return false;
 }
 
 /**
- * Send a 200 HTTP reponse without ending PHP execution.
+ * Send a 200 HTTP response without ending PHP execution.
  *
  * Useful to avoid issues like timeouts from gateways during
  * webhook/IPN handlers.
@@ -4249,7 +4265,7 @@ function pmpro_refund_order( $order ){
 /**
  * Returns an array of order statuses that do not qualify for a refund
  * 
- * @return array Returns an array of statuses that are not allowe to be refunded
+ * @return array Returns an array of statuses that are not allowed to be refunded
  */
 function pmpro_disallowed_refund_statuses() {
 
@@ -4412,9 +4428,19 @@ function pmpro_sanitize_period( $period ) {
 }
 
 /**
+ * Set the expiration date for an active membership.
+ *
+ * @since 3.0
+ *
+ * @param int $user_id The ID of the user to update.
+ * @param int $level_id The ID of the level to update.
+ * @param int|string $enddate The date to set the enddate to.
+ */
+
+/*
  * Check whether a file should be allowed to be uploaded.
  *
- * By default, only files assiciated with a user field can be uploaded,
+ * By default, only files associated with a user field can be uploaded,
  * but there is a filter to allow other files to be uploaded as well.
  *
  * @since 2.12.4

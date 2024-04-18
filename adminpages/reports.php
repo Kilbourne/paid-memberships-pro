@@ -59,9 +59,7 @@ if ( ! empty( $_REQUEST[ 'report' ] ) ) {
 		        );
 	        }
         }
-    }
-
-	?>
+    } ?>
 	<form id="pmpro-reports-form" method="post" action="admin-post.php">
 
 		<div class="dashboard-widgets-wrap">

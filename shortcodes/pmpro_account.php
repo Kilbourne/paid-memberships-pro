@@ -174,7 +174,6 @@ function pmpro_shortcode_account($atts, $content=null, $code="")
 						<?php } ?>
 					</tbody>
 				</table>
-				<?php //Todo: If there are multiple levels defined that aren't all in the same group defined as upgrades/downgrades ?>
 				<div class="<?php echo esc_attr( pmpro_get_element_class( 'pmpro_actionlinks' ) ); ?>">
 					<a id="pmpro_actionlink-levels" href="<?php echo esc_url( pmpro_url( "levels" ) ) ?>"><?php esc_html_e("View all Membership Options", 'paid-memberships-pro' );?></a>
 				</div>

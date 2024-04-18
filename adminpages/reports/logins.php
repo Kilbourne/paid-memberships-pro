@@ -36,33 +36,33 @@ function pmpro_report_login_widget() {
 	<tbody>
 		<tr>
 			<th scope="row"><?php esc_html_e('Today','paid-memberships-pro'); ?></th>
-			<td><?php echo number_format_i18n($visits['today']); ?></td>
-			<td><?php echo number_format_i18n($views['today']); ?></td>
-			<td><?php echo number_format_i18n($logins['today']);?></td>
+			<td><?php echo esc_html( number_format_i18n($visits['today']) ); ?></td>
+			<td><?php echo esc_html( number_format_i18n($views['today']) ); ?></td>
+			<td><?php echo esc_html( number_format_i18n($logins['today'] ));?></td>
 		</tr>
 		<tr>
 			<th scope="row"><?php esc_html_e('This Week','paid-memberships-pro'); ?></th>
-			<td><?php echo number_format_i18n($visits['week']); ?></td>
-			<td><?php echo number_format_i18n($views['week']); ?></td>
-			<td><?php echo number_format_i18n($logins['week']); ?></td>
+			<td><?php echo esc_html( number_format_i18n($visits['week']) ); ?></td>
+			<td><?php echo esc_html( number_format_i18n($views['week']) ); ?></td>
+			<td><?php echo esc_html( number_format_i18n($logins['week']) ); ?></td>
 		</tr>
 		<tr>
 			<th scope="row"><?php esc_html_e('This Month','paid-memberships-pro'); ?></th>
-			<td><?php echo number_format_i18n($visits['month']); ?></td>
-			<td><?php echo number_format_i18n($views['month']); ?></td>
-			<td><?php echo number_format_i18n($logins['month']); ?></td>
+			<td><?php echo esc_html( number_format_i18n($visits['month']) ); ?></td>
+			<td><?php echo esc_html( number_format_i18n($views['month']) ); ?></td>
+			<td><?php echo esc_html( number_format_i18n($logins['month']) ); ?></td>
 		</tr>
 		<tr>
 			<th scope="row"><?php esc_html_e('Year to Date','paid-memberships-pro'); ?></th>
-			<td><?php echo number_format_i18n($visits['ytd']); ?></td>
-			<td><?php echo number_format_i18n($views['ytd']); ?></td>
-			<td><?php echo number_format_i18n($logins['ytd']);?></td>
+			<td><?php echo esc_html( number_format_i18n($visits['ytd']) ); ?></td>
+			<td><?php echo esc_html( number_format_i18n($views['ytd']) ); ?></td>
+			<td><?php echo esc_html( number_format_i18n($logins['ytd']) );?></td>
 		</tr>
 		<tr>
 			<th scope="row"><?php esc_html_e('All Time','paid-memberships-pro'); ?></th>
-			<td><?php echo number_format_i18n($visits['alltime']); ?></td>
-			<td><?php echo number_format_i18n($views['alltime']);?></td>
-			<td><?php echo number_format_i18n($logins['alltime']); ?></td>
+			<td><?php echo esc_html( number_format_i18n($visits['alltime']) ); ?></td>
+			<td><?php echo esc_html( number_format_i18n($views['alltime']) );?></td>
+			<td><?php echo esc_html( number_format_i18n($logins['alltime']) ); ?></td>
 		</tr>
 	</tbody>
 	</table>

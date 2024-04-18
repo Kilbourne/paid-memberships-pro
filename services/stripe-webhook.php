@@ -19,10 +19,6 @@
 
 	global $logstr;	
 
-	//you can define a different # of seconds (define PMPRO_STRIPE_WEBHOOK_DELAY in your wp-config.php) if you need this webhook to delay more or less
-	if(!defined('PMPRO_STRIPE_WEBHOOK_DELAY'))
-		define('PMPRO_STRIPE_WEBHOOK_DELAY', 2);	
-
 	if(!class_exists("Stripe\Stripe")) {
 		require_once( PMPRO_DIR . "/includes/lib/Stripe/init.php" );
 	}
@@ -42,18 +38,18 @@
 			$livemode = ! empty( $post_event->livemode );
 		} else {
 			// No event data passed in body, so use current environment.
-			$livemode = get_option( 'pmro_gateway_environment' ) === 'live';
+			$livemode = get_option( 'pmpro_gateway_environment' ) === 'live';
 		}
 	}
 	else
 	{
 		$event_id = sanitize_text_field($_REQUEST['event_id']);
-		$livemode = get_option( 'pmro_gateway_environment' ) === 'live'; // User is testing, so use current environment.
+		$livemode = get_option( 'pmpro_gateway_environment' ) === 'live'; // User is testing, so use current environment.
 	}
 
 	try {
 		if ( PMProGateway_stripe::using_legacy_keys() ) {
-			$secret_key = get_option( "pmro_stripe_secretkey" );
+			$secret_key = get_option( "pmpro_stripe_secretkey" );
 		} elseif ( $livemode ) {
 			$secret_key = get_option( 'pmpro_live_stripe_connect_secretkey' );
 		} else {
@@ -123,6 +119,7 @@
 
 					$user_id = $old_order->user_id;
 					$user = get_userdata($user_id);
+
 					if ( empty( $user ) ) {
 						$logstr .= "Couldn't find the old order's user. Order ID = " . $old_order->id . ".";
 						pmpro_stripeWebhookExit();
@@ -489,7 +486,7 @@
 
 			//We've got the right order	
 			if( !empty( $morder->id ) ) {
-				// Ingore orders already in refund status.
+				// Ignore orders already in refund status.
 				if( $morder->status == 'refunded' ) {					
 					$logstr .= sprintf( 'Webhook: Order ID %1$s with transaction ID %2$s was already in refund status.', $morder->id, $payment_transaction_id );									
 					pmpro_stripeWebhookExit();

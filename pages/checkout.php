@@ -1,12 +1,12 @@
 <?php
 /**
  * Template: Checkout
- * Version: 2.0.2
+ * Version: 3.0
  *
  * See documentation for how to override the PMPro templates.
  * @link https://www.paidmembershipspro.com/documentation/templates/
  *
- * @version 2.0.2
+ * @version 3.0
  *
  * @author Paid Memberships Pro
  */
@@ -24,7 +24,7 @@ global $discount_code, $username, $password, $password2, $bfirstname, $blastname
 $pmpro_email_field_type = apply_filters('pmpro_email_field_type', true);
 
 // Set the wrapping class for the checkout div based on the default gateway;
-$default_gateway = pmpro_getOption( 'gateway' );
+$default_gateway = get_option( 'pmpro_gateway' );
 if ( empty( $default_gateway ) ) {
 	$pmpro_checkout_gateway_class = 'pmpro_checkout_gateway-none';
 } else {
@@ -89,7 +89,7 @@ if ( empty( $default_gateway ) ) {
 					<?php if($discount_code && pmpro_checkDiscountCode($discount_code)) { ?>
 						<?php
 							echo '<p class="' . esc_attr( pmpro_get_element_class( 'pmpro_level_discount_applied' ) ) . '">';
-							echo wp_kses( sprintf( __( 'The <strong>%s</strong> code has been applied to your order.', 'paid-memberships-pro' ), $discount_code ), array( 'strong' => array() ) );
+							echo sprintf( esc_html__( 'The %s code has been applied to your order.', 'paid-memberships-pro' ), '<strong>' . esc_html( $discount_code ) . '</strong>' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 							echo '</p>';
 						?>
 					<?php } ?>
@@ -387,7 +387,7 @@ if ( empty( $default_gateway ) ) {
 	<?php do_action("pmpro_checkout_after_billing_fields"); ?>
 
 	<?php
-		$pmpro_accepted_credit_cards = pmpro_getOption("accepted_credit_cards");
+		$pmpro_accepted_credit_cards = get_option( 'pmpro_accepted_credit_cards' );
 		$pmpro_accepted_credit_cards = explode(",", $pmpro_accepted_credit_cards);
 		$pmpro_accepted_credit_cards_string = pmpro_implodeToEnglish($pmpro_accepted_credit_cards);
 	?>
@@ -401,7 +401,7 @@ if ( empty( $default_gateway ) ) {
 				<span class="<?php echo esc_attr( pmpro_get_element_class( 'pmpro_checkout-h2-name' ) ); ?>"><?php esc_html_e('Payment Information', 'paid-memberships-pro' );?></span>
 				<span class="<?php echo esc_attr( pmpro_get_element_class( 'pmpro_checkout-h2-msg' ) ); ?>"><?php echo esc_html( sprintf( __('We Accept %s', 'paid-memberships-pro' ), $pmpro_accepted_credit_cards_string ) );?></span>
 			</h2>
-			<?php $sslseal = pmpro_getOption("sslseal"); ?>
+			<?php $sslseal = get_option( 'pmpro_sslseal' ); ?>
 			<?php if(!empty($sslseal)) { ?>
 				<div class="<?php echo esc_attr( pmpro_get_element_class( 'pmpro_checkout-fields-display-seal' ) ); ?>">
 			<?php } ?>
@@ -502,7 +502,7 @@ if ( empty( $default_gateway ) ) {
 	 * @return string $pmpro_tos_content
 	 */
 	$pmpro_tos_content = apply_filters( 'pmpro_tos_content', wp_kses_post( do_shortcode( $tospage->post_content ) ), $tospage );
-	echo $pmpro_tos_content; //phpcs:ignore Content escaped above, but filtering allowed.
+	echo $pmpro_tos_content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 ?>
 				</div> <!-- end pmpro_license -->
 				<?php
@@ -535,7 +535,7 @@ if ( empty( $default_gateway ) ) {
 
 	<div class="<?php echo esc_attr( pmpro_get_element_class( 'pmpro_checkout-field pmpro_captcha', 'pmpro_captcha' ) ); ?>">
 	<?php
-		$recaptcha = pmpro_getOption("recaptcha");
+		$recaptcha = get_option( "pmpro_recaptcha");
 		if ( $recaptcha == 2 || $recaptcha == 1 ) {
 			pmpro_recaptcha_get_html();
 		}
@@ -544,9 +544,11 @@ if ( empty( $default_gateway ) ) {
 
 	<?php
 		do_action('pmpro_checkout_after_captcha');
-	?>
+		do_action("pmpro_checkout_before_submit_button");
 
-	<?php do_action("pmpro_checkout_before_submit_button"); ?>
+		// Add nonce.
+		wp_nonce_field( 'pmpro_checkout_nonce', 'pmpro_checkout_nonce' );
+	?>
 
 	<div class="<?php echo esc_attr( pmpro_get_element_class( 'pmpro_submit' ) ); ?>">
 		<hr />
