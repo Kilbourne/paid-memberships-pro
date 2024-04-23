@@ -39,6 +39,58 @@ class PMPro_Discount_Code_List_Table extends WP_List_Table {
 	}
 
 	/**
+	 * Sets up screen options for the discount codes list table.
+	 *
+	 * @since 3.0
+	 */
+	public static function hook_screen_options() {
+		$list_table = new PMPro_Discount_Code_List_Table();
+		add_screen_option(
+			'per_page',
+			array(
+				'default' => 20,
+				'label'   => __( 'Discount codes per page', 'paid-memberships-pro' ),
+				'option'  => 'pmpro_discount_codes_per_page',
+			)
+		);
+		add_filter(
+			'screen_settings',
+			array(
+				$list_table,
+				'screen_controls',
+			),
+			10,
+			2
+		);
+		add_filter(
+			'set-screen-option',
+			array(
+				$list_table,
+				'set_screen_option',
+			),
+			10,
+			3
+		);
+		set_screen_options();
+	}
+
+	/**
+	 * Sets the screen options.
+	 *
+	 * @param string $dummy   Unused.
+	 * @param string $option  Screen option name.
+	 * @param string $value   Screen option value.
+	 * @return string
+	 */
+	public function set_screen_option( $dummy, $option, $value ) {
+		if ( 'pmpro_discount_codes_per_page' === $option ) {
+			return $value;
+		} else {
+			return $dummy;
+		}
+	}
+
+	/**
 	 * Prepares the list of items for displaying.
 	 *
 	 * Query, filter data, handle sorting, and pagination, and any other data-manipulation required prior to rendering
@@ -304,7 +356,7 @@ class PMPro_Discount_Code_List_Table extends WP_List_Table {
 	public function column_discount_code( $item ) {
 
 		?>
-		<strong><a title="<?php echo esc_attr( sprintf( __( 'Edit Code: %s', 'paid-memberships-pro' ), $item->id ) ); ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'pmpro-discountcodes', 'edit' => $item->id ), admin_url('admin.php' ) ) ); ?>"><?php echo $item->code; ?></a></strong>
+		<strong><a title="<?php echo esc_attr( sprintf( __( 'Edit Code: %s', 'paid-memberships-pro' ), $item->id ) ); ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'pmpro-discountcodes', 'edit' => $item->id ), admin_url('admin.php' ) ) ); ?>"><?php echo esc_html( $item->code ); ?></a></strong>
 		<div class="row-actions">
 		<?php
 			$delete_text = esc_html(
@@ -407,7 +459,7 @@ class PMPro_Discount_Code_List_Table extends WP_List_Table {
 			}
 
 			if ( ! empty( $actions_html ) ) {
-				echo implode( ' | ', $actions_html );
+				echo implode( ' | ', $actions_html ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			}
 		?>
 		</div>
@@ -495,6 +547,20 @@ class PMPro_Discount_Code_List_Table extends WP_List_Table {
 		} else {
 			esc_html_e( 'None', 'paid-memberships-pro' );
 		}
+	}
+
+	/**
+	 * Override single_row function to add error class if the discount code row need to be higlighted due miscounfiguration
+	 *
+	 * @param StdClass $item The current row item.
+	 * @return void
+	 * @since 3.0.2
+	 */
+	public function single_row( $item ) {
+		$cssClass = ( ! pmpro_check_discount_code_for_gateway_compatibility( $item ) ) ? 'pmpro_error' : '';
+		echo '<tr class="' . esc_attr( $cssClass ) . '">';
+		$this->single_row_columns( $item );
+		echo '</tr>';
 	}
 	
 }

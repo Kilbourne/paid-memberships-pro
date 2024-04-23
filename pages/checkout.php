@@ -66,7 +66,9 @@ if ( empty( $default_gateway ) ) {
 			</h2>
 			<div class="<?php echo esc_attr( pmpro_get_element_class( 'pmpro_checkout-fields' ) ); ?>">
 				<p class="<?php echo esc_attr( pmpro_get_element_class( 'pmpro_level_name_text' ) );?>">
-					<?php echo wp_kses( sprintf( __('You have selected the <strong>%s</strong> membership level.', 'paid-memberships-pro' ), $pmpro_level->name), array( 'strong' => array() ) );?>
+					<?php
+					// Tell the user which level they are signing up for.
+					printf( esc_html__('You have selected the %s membership level.', 'paid-memberships-pro' ), '<strong>' . esc_html( $pmpro_level->name ) . '</strong>' );
 				</p>
 
 				<?php

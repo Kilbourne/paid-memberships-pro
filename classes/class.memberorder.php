@@ -83,37 +83,6 @@
 		private $tax = null;
 
 		/**
-		 * Discount Code Amount
-		 *
-		 * @since 2.9
-		 *
-		 * @var float
-		 */
-		private $couponamount = 0.00;
-
-		/**
-		 * Certificate ID - Notice of deprecation started in 1.8.10. Should no longer be used.
-		 *
-		 * @since 2.9
-		 *
-		 * @var string
-		 *
-		 * @deprecated 1.8.10
-		 */
-		private $certificate_id = '';
-
-		/**
-		 * Certificate Amount - Notice of deprecation started in 1.8.10. Should no longer be used.
-		 *
-		 * @since 2.9
-		 *
-		 * @var string
-		 *
-		 * @deprecated 1.8.10
-		 */
-		private $certificateamount = '';
-
-		/**
 		 * Total order amount
 		 *
 		 * @since 2.9

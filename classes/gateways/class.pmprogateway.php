@@ -2,7 +2,7 @@
 	//require_once(dirname(__FILE__) . "/class.pmprogateway.php");
 	#[AllowDynamicProperties]
 	class PMProGateway
-	{
+	{	
 		function __construct($gateway = NULL)
 		{
 			$this->gateway = $gateway;
@@ -197,7 +197,7 @@
 			if(empty($order->subscription_transaction_id))
 				return false;
 			
-			//simulate a successful cancel			
+			//simulate a successful cancel
 			$order->updateStatus("cancelled");					
 			return true;
 		}	
@@ -211,10 +211,24 @@
 			//this looks different for each gateway, but generally an array of some sort
 			return array();
 		}
-		
+
 		function getTransactionStatus(&$order)
 		{			
 			//this looks different for each gateway, but generally an array of some sort
 			return array();
+		}		
+
+		/**
+		 * Check if the gateway supports a certain feature.
+		 * 
+		 * @since 3.0
+		 * 
+		 * @param string $feature The feature to check for.
+		 * @return bool|string Whether the gateway supports the requested. A string may be returned in cases where a feature has different variations of support.
+		 */
+		public static function supports( $feature ) {
+			// The base gateway doesn't support anything.			
+			return false;
+		}
 		}
 	}

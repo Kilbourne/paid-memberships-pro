@@ -119,40 +119,54 @@ function pmpro_member_shortcode($atts, $content=null, $code='')
 		$r = get_user_meta($user_id, $field, true);
 	}
 
-	//Check for dates to reformat them.
-	if(in_array( $field, $date_fields )) {
-		if(empty($r) || $r == '0000-00-00 00:00:00')
-			$r = '';
-		elseif(is_numeric($r))
-			$r = date_i18n(get_option('date_format'), $r);											//timestamp
-		else
-			$r = date_i18n(get_option('date_format'), strtotime($r, current_time('timestamp')));	//YYYY-MM-DD/etc format
+	// Check for dates to reformat them.
+	if ( in_array( $field, $date_fields ) ) {
+		if ( empty( $r ) || $r === '0000-00-00 00:00:00' ) {
+			$r = ''; // Empty date.
+		} elseif ( is_numeric( $r ) ) {
+			$r = date_i18n( get_option( 'date_format' ), $r ); // Timestamp.
+		} else {
+			$r = date_i18n( get_option( 'date_format' ), strtotime( $r, current_time( 'timestamp' ) ) ); // YYYY-MM-DD/etc format.
+		}
 	}
 
-	//Check for prices to reformat them.
-	if(in_array( $field, $price_fields )) {
-		if(empty($r) || $r == '0.00')
+	// Check for prices to reformat them.
+	if ( in_array( $field, $price_fields ) ) {
+		if ( empty( $r ) || $r == '0.00' ) {
 			$r = '';
-		else
-			$r = pmpro_escape_price( pmpro_formatPrice($r) );
+		} else {
+			$r = pmpro_escape_price( pmpro_formatPrice( $r ) );
+		}
+	}
+
+	// Check for files to reformat them.
+	if ( is_array( $r ) && ! empty( $r['fullurl'] ) ) {
+		$file_field = pmpro_get_user_field( $field );
+		if ( ! empty( $file_field ) ) {
+			$file_field->file = $r;
+			$file_field->readonly = true;
+			$r = $file_field->displayValue( $r['fullurl'], false ); // False to not echo.
+		} else {
+			$r = '<a href="' . esc_url( $r['fullurl'] ) . '">' . esc_html( basename($r['fullurl'] ) ) . '</a>';
+		}
 	}
 
 	// If this is a user field with an associative array of options, get the label(s) for the value(s).
 	$r = pmpro_get_label_for_user_field_value( $field, $r );
 
-	//Check for arrays to reformat them.
+	// Check for arrays to reformat them.
 	if ( is_array( $r ) ) {
 		$r = implode( ', ', $r );
 	}
 
-	/** 
+	/**
 	 * Filter
 	 */
-	$r = apply_filters('pmpro_member_shortcode_field', $r, $user_id, $field);
+	$r = apply_filters( 'pmpro_member_shortcode_field', $r, $user_id, $field );
 
 	return $r;
 }
-add_shortcode('pmpro_member', 'pmpro_member_shortcode');
+add_shortcode( 'pmpro_member', 'pmpro_member_shortcode' );
 
 /**
  * Strip the [pmpro_member] shortcode from content if the current user can't edit users.

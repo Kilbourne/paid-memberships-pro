@@ -1234,7 +1234,7 @@ function pmpro_changeMembershipLevel( $level, $user_id = null, $old_level_status
 function pmpro_do_action_after_all_membership_level_changes( $filter_contents = null ) {
 	global $pmpro_old_user_levels;
 	if ( empty( $pmpro_old_user_levels ) ) {
-		// No level changes occured, return.
+		// No level changes occurred, return.
 		return $filter_contents;
 	}
 
@@ -1243,7 +1243,7 @@ function pmpro_do_action_after_all_membership_level_changes( $filter_contents = 
 	$pmpro_old_user_levels = null;
 
 	/**
-	 * Run code after all membership level changes have occured. Users who have had changes
+	 * Run code after all membership level changes have occurred. Users who have had changes
 	 * will be stored in the global $pmpro_old_user_levels array.
 	 *
 	 * @since  2.6
@@ -1286,7 +1286,7 @@ function pmpro_listCategories( $parent_id = 0, $level_categories = array() ) {
 			} ?>
 			<div class="pmpro_clickable">
 				<input type="checkbox" name="membershipcategory_<?php echo esc_attr( $cat->term_id ); ?>" id="membershipcategory_<?php echo esc_attr( $cat->term_id ); ?>" value="yes" <?php echo esc_attr( $checked ); ?>>
-				<label for="membershipcategory_<?php echo esc_attr( $cat->term_id ); ?>"><?php echo $cat->name; ?></label>
+				<label for="membershipcategory_<?php echo esc_attr( $cat->term_id ); ?>"><?php echo esc_html( $cat->name ); ?></label>
 			</div>
 			<?php pmpro_listCategories( $cat->term_id, $level_categories ); ?>
 			<?php
@@ -1848,6 +1848,10 @@ function pmpro_checkDiscountCode( $code, $level_id = null, $return_errors = fals
 }
 
 function pmpro_no_quotes( $s, $quotes = array( "'", '"' ) ) {
+	if ( empty( $s ) ) {
+		$s = '';
+	}
+
 	return str_replace( $quotes, '', $s );
 }
 
@@ -2068,8 +2072,8 @@ function pmpro_getMembershipLevelForUser( $user_id = null, $force = false ) {
  *		Failure returns false.
  */
 function pmpro_getMembershipLevelsForUser( $user_id = null, $include_inactive = false ) {
+	global $current_user, $pmpro_pages;
 	if ( empty( $user_id ) ) {
-		global $current_user;
 		$user_id = $current_user->ID;
 	}
 
@@ -2309,8 +2313,10 @@ function pmpro_are_any_visible_levels() {
  * Get level at checkout and place into $pmpro_level global.
  * If no level is passed or found in the URL parameters, global vars,
  * or in the post options, then this will return the first level found.
+ *
  * @param int $level_id (optional) Pass a level ID to force that level.
- * @param string $discount_code (optional) Pass a discount code to force that code.
+ * @param string $discount_code (optional) Pass a discount code to force that code
+ *
  * @return mixed|void
  */
 function pmpro_getLevelAtCheckout( $level_id = null, $discount_code = null ) {

@@ -37,7 +37,7 @@ add_filter( 'login_redirect','pmpro_login_redirect', 10, 3 );
  * Where is the sign up page? Levels page or default multisite page.
  */
 function pmpro_wp_signup_location( $location ) {
-	if ( is_multisite() && pmpro_getOption("redirecttosubscription") ) {
+	if ( is_multisite() && get_option("pmpro_redirecttosubscription") ) {
 		$location = pmpro_url("levels");
 	}
 
@@ -461,7 +461,7 @@ function pmpro_login_forms_handler( $show_menu = true, $show_logout_link = true,
 
 	// Note we don't show messages on the widget form.
 	if ( $message && $location !== 'widget' ) {
-		echo '<div class="' . pmpro_get_element_class( 'pmpro_message ' . $msgt, esc_attr( $msgt ) ) . '">'. wp_kses_post( $message ) .'</div>';
+		echo '<div class="' . esc_attr( pmpro_get_element_class( 'pmpro_message ' . $msgt, esc_attr( $msgt ) ) ) . '">'. wp_kses_post( $message ) .'</div>';
 	}
 
 	// Get the form title HTML tag.
@@ -499,7 +499,13 @@ function pmpro_login_forms_handler( $show_menu = true, $show_logout_link = true,
 						}
 					?>
 					<?php
-						pmpro_login_form( array( 'value_username' => esc_html( $username ), 'redirect' => esc_url( $redirect_to ) ) );
+						$login_form_array = array(
+							'value_username' => esc_html( $username ),
+						);
+						if ( ! empty( $redirect_to ) ) {
+							$login_form_array['redirect'] = esc_url( $redirect_to );
+						}
+						pmpro_login_form( $login_form_array );
 						pmpro_login_forms_handler_nav( 'login' );
 					?>
 				</div> <!-- end pmpro_login_wrap -->
@@ -514,13 +520,13 @@ function pmpro_login_forms_handler( $show_menu = true, $show_logout_link = true,
 		} elseif ( $location !== 'widget' && ( $action === 'reset_pass' || ( $action === 'rp' && in_array( $_REQUEST['login'], array( 'invalidkey', 'expiredkey' ) ) ) ) ) {
 			// Reset password form.
 			?>
-			<div class="<?php echo pmpro_get_element_class( 'pmpro_lost_password_wrap' ); ?>">
+			<div class="<?php echo esc_attr( pmpro_get_element_class( 'pmpro_lost_password_wrap' ) ); ?>">
 				<?php
 					if ( ! pmpro_is_login_page() ) {
-						echo $before_title . esc_html__( 'Password Reset', 'paid-memberships-pro' ) . $after_title;
+						echo $before_title . esc_html__( 'Password Reset', 'paid-memberships-pro' ) . $after_title; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 					}
 				?>
-				<p class="<?php echo pmpro_get_element_class( 'pmpro_lost_password-instructions' ); ?>">
+				<p class="<?php echo esc_attr( pmpro_get_element_class( 'pmpro_lost_password-instructions' ) ); ?>">
 					<?php
 						esc_html_e( 'Please enter your username or email address. You will receive a link to create a new password via email.', 'paid-memberships-pro' );
 					?>
@@ -534,10 +540,10 @@ function pmpro_login_forms_handler( $show_menu = true, $show_logout_link = true,
 		} elseif ( $location !== 'widget' && $action === 'rp' ) {
 			// Password reset processing key.
 			?>
-			<div class="<?php echo pmpro_get_element_class( 'pmpro_reset_password_wrap' ); ?>">
+			<div class="<?php echo esc_attr( pmpro_get_element_class( 'pmpro_reset_password_wrap' ) ); ?>">
 				<?php
 					if ( ! pmpro_is_login_page() ) {
-						echo $before_title . esc_html__( 'Reset Password', 'paid-memberships-pro' ) . $after_title;
+						echo $before_title . esc_html__( 'Reset Password', 'paid-memberships-pro' ) . $after_title; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 					}
 				?>
 				<?php pmpro_reset_password_form(); ?>
@@ -549,7 +555,7 @@ function pmpro_login_forms_handler( $show_menu = true, $show_logout_link = true,
 		if ( isset( $_REQUEST['login'] ) && isset( $_REQUEST['key'] ) ) {
 			esc_html_e( 'You are already signed in.', 'paid-memberships-pro' );
 		} elseif ( ! empty( $display_if_logged_in ) ) { ?>
-			<div class="<?php echo pmpro_get_element_class( 'pmpro_logged_in_welcome_wrap' ); ?>">
+			<div class="<?php echo esc_attr( pmpro_get_element_class( 'pmpro_logged_in_welcome_wrap' ) ); ?>">
 				<?php pmpro_logged_in_welcome( $show_menu, $show_logout_link ); ?>
 			</div> <!-- end pmpro_logged_in_welcome_wrap -->
 			<?php

@@ -2,7 +2,7 @@
 	//only admins can get this
 	if(!function_exists("current_user_can") || (!current_user_can("manage_options") && !current_user_can("pmpro_discountcodes")))
 	{
-		die(__("You do not have permissions to perform this action.", 'paid-memberships-pro' ));
+		die(esc_html__("You do not have permissions to perform this action.", 'paid-memberships-pro' ));
 	}
 
 	//vars
@@ -356,15 +356,15 @@
 
 	require_once(dirname(__FILE__) . "/admin_header.php");
 ?>
-
+	<hr class="wp-header-end">
 	<?php if($edit) { ?>
 
 		<h1>
 			<?php
 				if($edit > 0)
-					echo __("Edit Discount Code", 'paid-memberships-pro' );
+					echo esc_html__("Edit Discount Code", 'paid-memberships-pro' );
 				else
-					echo __("Add New Discount Code", 'paid-memberships-pro' );
+					echo esc_html__("Add New Discount Code", 'paid-memberships-pro' );
 			?>
 		</h1>
 
