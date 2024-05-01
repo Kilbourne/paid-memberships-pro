@@ -80,7 +80,7 @@
 		 *
 		 * @var float
 		 */
-		private $tax = null;
+		private $tax = 0.00;
 
 		/**
 		 * Total order amount
@@ -226,6 +226,31 @@
 		 */
 		private $checkout_id = '';	
 
+		/**
+		 * The discount code ID that was used for this order.
+		 *
+		 * This property is being added in PMPro v3.0 with the intention
+		 * of adding a new column to the pmpro_membership_orders table duringe next
+		 * major release. For now, we need to have code to "fake" this property.
+		 * For now, this property will be initialized to `null` and will be set to an int
+		 * when this property is accessed.
+		 *
+		 * Step 1 (v3.0): Create abstracted function for modifying/searching the discount code ID.
+		 * Step 2 (At least 1 year later): Update Add Ons to use the new abstracted functions.
+		 * Step 3 (Next major release after all Add Ons updated): Add new column to the pmpro_membership_orders
+		 *        table for the discount code ID, update the abstracted functions to use the new column, create
+		 *        migration script to move the discount code ID from the pmpro_discount_codes_uses table to the
+		 *        new column in the pmpro_membership_orders table, and finally, drop the pmpro_discount_codes_uses table.
+		 *
+		 * Search "@DISCOUNT_CODE_ID_TODO" to find the places where we need to update
+		 * the code to use the new column when we add it.
+		 *
+		 * `0` means no discount code was used, any other int is the ID of the discount code used.
+		 *
+		 * @since 3.0
+		 *
+		 * @var int|null
+		 */
 		/**
 		 * Defines an array of optionally used properties
 		 *
@@ -427,11 +452,11 @@
 			$prepared = array();
 			$where    = array();
 
-			$orderby  = isset( $args['orderby'] ) ? $args['orderby'] : '`timestamp` DESC';
+			$orderby  = isset( $args['orderby'] ) ? $args['orderby'] : '`o`.`timestamp` DESC';
 			$limit    = isset( $args['limit'] ) ? (int) $args['limit'] : 100;
 
 			// Detect unsupported orderby usage (in the future we may support better syntax).
-			if ( $orderby !== preg_replace( '/[^a-zA-Z0-9\s,`]/', ' ', $orderby ) ) {
+			if ( $orderby !== preg_replace( '/[^a-zA-Z0-9\s,.`]/', ' ', $orderby ) ) {
 				return array();
 			}
 
@@ -531,12 +556,12 @@
 			}
 
 			// Filter by payment transaction ID
-			if ( isset( $args['payment_transaction_id'] ) && null !== $args['payment_transaction_id'] ) {
+			if ( isset( $args['payment_transaction_id'] ) ) {
 				if ( ! is_array( $args['payment_transaction_id'] ) ) {
-					$where[]    = 'payment_transaction_id = %s';
+					$where[]    = '`o`.`payment_transaction_id` = %s';
 					$prepared[] = $args['payment_transaction_id'];
 				} else {
-					$where[]  = 'payment_transaction_id IN ( ' . implode( ', ', array_fill( 0, count( $args['payment_transaction_id'] ), '%f' ) ) . ' )';
+					$where[]  = '`o`.`payment_transaction_id` IN ( ' . implode( ', ', array_fill( 0, count( $args['payment_transaction_id'] ), '%f' ) ) . ' )';
 					$prepared = array_merge( $prepared, $args['payment_transaction_id'] );
 				}
 			}
@@ -858,8 +883,10 @@
 		 * Get the most recent order for a user.
 		 *
 		 * @param int $user_id ID of user to find order for.
-		 * @param string $status Limit search to only orders with this status. Defaults to "success".
-		 * @param int $membership_id Limit search to only orders for this membership level. Defaults to NULL to find orders for any level.
+		 * @param string|string[] $status Limit search to only orders with this status. Defaults to "success".
+		 * @param int|int[] $membership_id Limit search to only orders for this membership level. Defaults to NULL to find orders for any level.
+		 * @param string $gateway Limit search to only orders with this gateway. Defaults to NULL to find orders for any gateway.
+		 * @param string $gateway_environment Limit search to only orders with this gateway environment. Defaults to NULL to find orders for any gateway environment.
 		 *
 		 * @return MemberOrder
 		 */
@@ -880,8 +907,11 @@
 				$this->sqlQuery .= "AND status = '" . esc_sql($status) . "' ";
 			}
 
-			if(!empty($membership_id))
+			if(!empty($membership_id) && is_array($membership_id)) {
+				$this->sqlQuery .= "AND membership_id IN(" . implode( ",", array_map( 'esc_sql', $membership_id ) ) . ") ";
+			} elseif(!empty($membership_id)) {
 				$this->sqlQuery .= "AND membership_id = '" . esc_sql( $membership_id ) . "' ";
+			}
 
 			if(!empty($gateway))
 				$this->sqlQuery .= "AND gateway = '" . esc_sql($gateway) . "' ";
@@ -1151,7 +1181,7 @@
 			$tax_rate = get_option("pmpro_tax_rate");
 
 			//default
-			$tax = 0;
+			$tax = 0.00;
 
 			//calculate tax
 			if($tax_state && $tax_rate)
@@ -1178,7 +1208,7 @@
 				$values['billing_country'] = $this->billing->country;
 
 			//filter
-			$tax = apply_filters("pmpro_tax", $tax, $values, $this);
+			$tax = (float)apply_filters("pmpro_tax", $tax, $values, $this);
 			return $tax;
 		}
 

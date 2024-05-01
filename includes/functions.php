@@ -39,7 +39,11 @@ function pmpro_setDBTables() {
 	$wpdb->pmpro_discount_codes_levels = $wpdb->prefix . 'pmpro_discount_codes_levels';
 	$wpdb->pmpro_discount_codes_uses = $wpdb->prefix . 'pmpro_discount_codes_uses';
 	$wpdb->pmpro_membership_levelmeta = $wpdb->prefix . 'pmpro_membership_levelmeta';
+	$wpdb->pmpro_subscriptions = $wpdb->prefix . 'pmpro_subscriptions';
 	$wpdb->pmpro_membership_ordermeta = $wpdb->prefix . 'pmpro_membership_ordermeta';
+	$wpdb->pmpro_subscriptionmeta = $wpdb->prefix . 'pmpro_subscriptionmeta';
+	$wpdb->pmpro_groups = $wpdb->prefix . 'pmpro_groups';
+	$wpdb->pmpro_membership_levels_groups = $wpdb->prefix . 'pmpro_membership_levels_groups';
 }
 pmpro_setDBTables();
 
@@ -100,7 +104,7 @@ function pmpro_setOption( $s, $v = null, $sanitize_function = 'sanitize_text_fie
 
 	if ( is_array( $v ) ) {
 		$v = implode( ',', $v );
-	} else {
+	} elseif ( is_string( $v ) ) {
 		$v = trim( $v );
 	}
 
@@ -622,6 +626,25 @@ function update_pmpro_membership_order_meta( $order_id, $meta_key, $meta_value, 
 
 function delete_pmpro_membership_order_meta( $order_id, $meta_key, $meta_value = '' ) {
 	return delete_metadata( 'pmpro_membership_order', $order_id, $meta_key, $meta_value );
+}
+
+/**
+ * pmpro_subscription Meta Functions
+ */
+function add_pmpro_subscription_meta( $subscription_id, $meta_key, $meta_value, $unique = false ) {
+	return add_metadata( 'pmpro_subscription', $subscription_id, $meta_key, $meta_value, $unique );
+}
+
+function get_pmpro_subscription_meta( $subscription_id, $key = '', $single = false ) {
+	return get_metadata( 'pmpro_subscription', $subscription_id, $key, $single );
+}
+
+function update_pmpro_subscription_meta( $subscription_id, $meta_key, $meta_value, $prev_value = '' ) {
+	return update_metadata( 'pmpro_subscription', $subscription_id, $meta_key, $meta_value, $prev_value );
+}
+
+function delete_pmpro_subscription_meta( $subscription_id, $meta_key, $meta_value = '' ) {
+	return delete_metadata( 'pmpro_subscription', $subscription_id, $meta_key, $meta_value );
 }
 
 function pmpro_hideAds() {

@@ -195,30 +195,6 @@
 
 					$logstr .= "Created new order with ID #" . $morder->id . ". Event ID #" . $pmpro_stripe_event->id . ".";
 
-					/*
-						Checking if there is an update "after next payment" for this user.
-					*/
-					$user_updates = $user->pmpro_stripe_updates;
-					if(!empty($user_updates))
-					{
-						foreach($user_updates as $key => $update)
-						{
-							if($update['when'] == 'payment')
-							{
-								PMProGateway_stripe::updateSubscription($update, $user_id);
-
-								//remove this update
-								unset($user_updates[$key]);
-
-								//only process the first next payment update
-								break;
-							}
-						}
-
-						//save updates in case we removed some
-						update_user_meta($user_id, "pmpro_stripe_updates", $user_updates);
-					}
-
 					do_action('pmpro_subscription_payment_completed', $morder);
 
 					pmpro_stripeWebhookExit();

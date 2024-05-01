@@ -4,7 +4,7 @@
  * Checks for WP default, TML, and PMPro login page.
  */
 function pmpro_is_login_page() {
-	return ( in_array( $GLOBALS['pagenow'], array( 'wp-login.php', 'wp-register.php' ) ) || is_page( 'login' ) || ( pmpro_getOption( 'login_page_id' ) && is_page( pmpro_getOption( 'login_page_id' ) ) ) );
+	return ( in_array( $GLOBALS['pagenow'], array( 'wp-login.php', 'wp-register.php' ) ) || is_page( 'login' ) || ( get_option( 'pmpro_login_page_id' ) && is_page( get_option( 'pmpro_login_page_id' ) ) ) );
 }
 
 /**
@@ -744,7 +744,7 @@ function pmpro_reset_password_form() {
  */
 function pmpro_login_forms_handler_nav( $pmpro_form ) { ?>
 	<hr />
-	<p class="<?php echo pmpro_get_element_class( 'pmpro_actions_nav' ); ?>">
+	<p class="<?php echo esc_attr( pmpro_get_element_class( 'pmpro_actions_nav' ) ); ?>">
 		<?php
 			// Build the links to return.
 			$links = array();
@@ -754,7 +754,7 @@ function pmpro_login_forms_handler_nav( $pmpro_form ) { ?>
 			}
 
 			if ( apply_filters( 'pmpro_show_register_link', get_option( 'users_can_register' ) ) ) {
-				$levels_page_id = pmpro_getOption( 'levels_page_id' );
+				$levels_page_id = get_option( 'pmpro_levels_page_id' );
 
 				if ( $levels_page_id && pmpro_are_any_visible_levels() ) {
 					$links['register'] = sprintf( '<a href="%s">%s</a>', esc_url( pmpro_url( 'levels' ) ), esc_html__( 'Join Now', 'paid-memberships-pro' ) );
@@ -785,11 +785,12 @@ function pmpro_login_forms_handler_nav( $pmpro_form ) { ?>
 }
 
 /**
- * Function to handle the actualy password reset and update password.
+ * Function to handle the actually password reset and update password.
  * @since 2.3
  */
 function pmpro_do_password_reset() {
 
+	// Only run this code when the password reset it being processed.
     if ( 'POST' != $_SERVER['REQUEST_METHOD'] ) {
 		return;
 	}
@@ -985,10 +986,10 @@ function pmpro_logged_in_welcome( $show_menu = true, $show_logout_link = true ) 
 			$user_account_link = '<a href="' . esc_url( admin_url( 'profile.php' ) ) . '">' . esc_html( preg_replace( '/\@.*/', '', $current_user->display_name ) ) . '</a>';
 		}
 		?>
-		<h3 class="<?php echo pmpro_get_element_class( 'pmpro_member_display_name' ); ?>">
+		<h3 class="<?php echo esc_attr( pmpro_get_element_class( 'pmpro_member_display_name' ) ); ?>">
 			<?php
 				/* translators: a generated link to the user's account or profile page */
-				printf( esc_html__( 'Welcome, %s', 'paid-memberships-pro' ), $user_account_link );
+				printf( esc_html__( 'Welcome, %s', 'paid-memberships-pro' ), $user_account_link ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			?>
 		</h3>
 
@@ -1022,7 +1023,7 @@ function pmpro_logged_in_welcome( $show_menu = true, $show_logout_link = true ) 
 		 *
 		 */
 		if ( ! empty ( $show_logout_link ) ) { ?>
-			<div class="<?php echo pmpro_get_element_class( 'pmpro_member_log_out' ); ?>"><a href="<?php echo esc_url( wp_logout_url() ); ?>"><?php esc_html_e( 'Log Out', 'paid-memberships-pro' ); ?></a></div>
+			<div class="<?php echo esc_attr( pmpro_get_element_class( 'pmpro_member_log_out' ) ); ?>"><a href="<?php echo esc_url( wp_logout_url() ); ?>"><?php esc_html_e( 'Log Out', 'paid-memberships-pro' ); ?></a></div>
 			<?php
 		}
 	}
@@ -1067,7 +1068,7 @@ function pmpro_confirmaction_handler() {
 	$result     = wp_validate_user_request_key( $request_id, $key );
 
 	if ( is_wp_error( $result ) ) {
-		wp_die( $result );
+		wp_die( esc_html( $result ) );
 	}
 
 	/** This action is documented in wp-login.php */

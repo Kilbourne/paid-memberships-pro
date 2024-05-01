@@ -1,13 +1,16 @@
 <?php
-/*
-	Shortcode to show a specific user field for current user or specified user ID.
-*/
-function pmpro_member_shortcode($atts, $content=null, $code='')
-{	
-	// $atts    ::= array of attributes
-	// $content ::= text within enclosing form of shortcode element
-	// $code    ::= the shortcode found, when == callback name
-	// examples: [pmpro_member field='last_name']
+/**
+ * Shortcode to show a specific user field for current user or specified user ID.
+ *
+ * Example: [pmpro_member field='last_name' user_id='1', levels='1,2,3']
+ *
+ * @param array       $atts The shortcode attributes passed in.
+ * @param string|null $content The content passed in or null if not set.
+ * @param string      $shortcode_tag The name of the shortcode tag used.
+ *
+ * @return string The shortcode output.
+ */
+function pmpro_member_shortcode( $atts, $content = null, $shortcode_tag = '' ) {
 	global $current_user;
 
 	extract(shortcode_atts(array(
@@ -61,7 +64,7 @@ function pmpro_member_shortcode($atts, $content=null, $code='')
 		'ExpirationYear',
 	);
 
-	//fields stored in wp_users column
+	// Get a list of fields saved in the wp_users table.
 	$user_column_fields = array(
 		'user_login',
 		'user_email',
@@ -70,7 +73,7 @@ function pmpro_member_shortcode($atts, $content=null, $code='')
 		'display_name',
 	);
 
-	//date fields
+	// Get a list of date fields.
 	$date_fields = array(
 		'startdate',
 		'enddate',
@@ -79,7 +82,7 @@ function pmpro_member_shortcode($atts, $content=null, $code='')
 		'next_payment_date',
 	);
 
-	//price fields
+	// Get a list of price fields.
 	$price_fields = array(
 		'initial_payment',
 		'billing_amount',
@@ -106,17 +109,17 @@ function pmpro_member_shortcode($atts, $content=null, $code='')
 	} elseif(in_array( $field, $pmpro_user_meta_fields )) {
 		//pmpro-related fields stored in user meta
 		$field = 'pmpro_' . $field;
-		$r = get_user_meta($user_id, $field, true);
-	} elseif(in_array( $field, $user_column_fields )) {
-		//wp_users column
-		$user = get_userdata($user_id);
-		$r = $user->{$field};
-	} elseif( $field == 'avatar' ) {
+		$r = get_user_meta($user_id, $field, true );
+	} elseif ( in_array( $field, $user_column_fields ) ) {
+		// wp_users column.
+		$user = get_userdata( $user_id );
+		$r    = $user->{$field};
+	} elseif ( $field === 'avatar' ) {
 		// Get the user's avatar.
 		$r = get_avatar( $user_id );
 	} else {
-		//assume user meta
-		$r = get_user_meta($user_id, $field, true);
+		// Assume user meta.
+		$r = get_user_meta( $user_id, $field, true );
 	}
 
 	// Check for dates to reformat them.

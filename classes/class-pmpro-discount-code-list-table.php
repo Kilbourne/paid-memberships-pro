@@ -107,7 +107,7 @@ class PMPro_Discount_Code_List_Table extends WP_List_Table {
 
 		$this->items = $this->sql_table_data();
 
-		$items_per_page = $this->get_items_per_page( 'discount_codes_per_page' );
+		$items_per_page = $this->get_items_per_page( 'pmpro_discount_codes_per_page' );
 		$total_items = $this->sql_table_data( true );
 		$this->set_pagination_args(
 			array(
@@ -167,9 +167,22 @@ class PMPro_Discount_Code_List_Table extends WP_List_Table {
 	 * @return Array
 	 */
 	public function get_hidden_columns() {
-		
-		return array();
-		
+		$user = wp_get_current_user();
+ 		if ( ! $user ) {
+ 			return array();
+ 		}
+
+ 		// Check whether the current user has changed screen options or not.
+ 		$hidden = get_user_meta( $user->ID, 'manage' . $this->screen->id . 'columnshidden', true );
+
+ 		// If user meta is not found, add the default hidden columns.
+ 		// Right now, we don't have any default hidden columns.
+ 		if ( ! $hidden ) {
+ 			$hidden = array();
+ 			update_user_meta( $user->ID, 'manage' . $this->screen->id . 'columnshidden', $hidden );
+ 		}
+
+ 		return $hidden;
 	}
 
 	/**
@@ -238,7 +251,7 @@ class PMPro_Discount_Code_List_Table extends WP_List_Table {
 			$pn = 1;
 		}
 		
-		$limit = $this->get_items_per_page( 'discount_codes_per_page' );
+		$limit = $this->get_items_per_page( 'pmpro_discount_codes_per_page' );
 
 		$end = $pn * $limit;
 		$start = $end - $limit;
@@ -536,7 +549,7 @@ class PMPro_Discount_Code_List_Table extends WP_List_Table {
 		$level_names = array();
 		foreach( $levels as $level ) {
 			if ( ! empty( $pmpro_pages['checkout'] ) ) {
-				$level_names[] = '<a target="_blank" href="' . esc_url( pmpro_url( 'checkout', '?level=' . $level->id . '&discount_code=' . $item->code ) ) . '">' . esc_html( $level->name ) . '</a>';
+				$level_names[] = '<a target="_blank" href="' . esc_url( pmpro_url( 'checkout', '?pmpro_level=' . $level->id . '&pmpro_discount_code=' . $item->code ) ) . '">' . esc_html( $level->name ) . '</a>';
 			} else {
 				$level_names[] = $level->name;
 			}
