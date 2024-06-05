@@ -1,13 +1,8 @@
 <?php
-global $post, $gateway, $wpdb, $besecure, $discount_code, $discount_code_id, $pmpro_level, $pmpro_levels, $pmpro_msg, $pmpro_msgt, $pmpro_review, $skip_account_fields, $pmpro_paypal_token, $pmpro_show_discount_code, $pmpro_error_fields, $pmpro_required_billing_fields, $pmpro_required_user_fields, $wp_version, $current_user, $pmpro_checkout_level_ids;
+global $post, $gateway, $wpdb, $besecure, $discount_code, $discount_code_id, $pmpro_level, $pmpro_msg, $pmpro_msgt, $pmpro_review, $skip_account_fields, $pmpro_paypal_token, $pmpro_show_discount_code, $pmpro_error_fields, $pmpro_required_billing_fields, $pmpro_required_user_fields, $wp_version, $current_user, $pmpro_checkout_level_ids;
 
 // we are on the checkout page
 add_filter( 'pmpro_is_checkout', '__return_true' );
-
-//make sure we know current user's membership level
-if ( $current_user->ID ) {
-	$current_user->membership_level = pmpro_getMembershipLevelForUser( $current_user->ID );
-}
 
 //this var stores fields with errors so we can make them red on the frontend
 $pmpro_error_fields = array();
@@ -92,10 +87,6 @@ if ( ! $besecure && ! empty( $_REQUEST['submit-checkout'] ) && is_ssl() ) {
 
 //action to run extra code for gateways/etc
 do_action( 'pmpro_checkout_preheader' );
-
-//get all levels in case we need them
-global $pmpro_levels;
-$pmpro_levels = pmpro_getAllLevels();
 
 // We set a global var for add-ons that are expecting it.
 $pmpro_show_discount_code = pmpro_show_discount_code();

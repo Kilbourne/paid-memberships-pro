@@ -13,10 +13,6 @@ if ( ! is_user_logged_in() ) {
 	exit;
 }
 
-// Get the membership level for the current user.
-if ( $current_user->ID ) {
-	$current_user->membership_level = pmpro_getMembershipLevelForUser($current_user->ID);
-}
 
 // Get the most recent invoice for the current user.
 $pmpro_invoice = new MemberOrder();
