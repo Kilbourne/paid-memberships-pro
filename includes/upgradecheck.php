@@ -277,7 +277,7 @@ function pmpro_checkForUpgrades() {
  		pmpro_db_delta();
  		update_option( 'pmpro_db_version', '2.71' );
  	}
-	
+
 	/**
 	 * Version 2.8
 	 * Default option for Wisdom tracking.
@@ -296,7 +296,7 @@ function pmpro_checkForUpgrades() {
 		pmpro_maybe_schedule_crons();
 		update_option( 'pmpro_db_version', '2.81' );
 	}
-
+	
 	/**
 	 * Version 2.9.4
 	 * Check the current domain and store it
@@ -335,10 +335,39 @@ function pmpro_checkForUpgrades() {
 		pmpro_db_delta();
 		update_option( 'pmpro_db_version', '2.97' );
 	}
+
+	/**
+	 * Version 3.0 (db v3.0-3.009 for RC's)
+	 * Running `pmpro_db_delta` to add subscription and subscription meta tables.
+	 * Populate subscription and subscription meta tables based on this site's order data.
+	 * Updates all orders in `cancelled` status to `success` so that we can remove cancelled status.
+	 */
+	require_once( PMPRO_DIR . "/includes/updates/upgrade_3_0.php" );
+	if ( $pmpro_db_version < 3.001 ) {
+		// Run the dbDelta function to add new tables.
+		pmpro_db_delta();
+
+		// Determine if the migration script has already ran ($pmpro_db_version >= 3.0).
+		$rerunning_migration = $pmpro_db_version >= 3.0;
+
+		// Run the migration script.
+		$pmpro_db_version = pmpro_upgrade_3_0( $rerunning_migration );
+
+		// If the migration script has already ran, we need to update the db version to the latest version.
+		update_option( 'pmpro_db_version', '3.001' );
+	}
+
+	/**
+	 * Version 3.0.2
+	 * Default sites that are already using outdated page templates to continue using them.
+	 */
+	if ( $pmpro_db_version < 3.02 ) {
+		require_once( PMPRO_DIR . "/includes/updates/upgrade_3_0_2.php" );
+		pmpro_upgrade_3_0_2(); // This function will update the db version.
+	}
 }
 
-function pmpro_db_delta()
-{
+function pmpro_db_delta() {
 	require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 
 	global $wpdb;
@@ -352,7 +381,25 @@ function pmpro_db_delta()
 	$wpdb->pmpro_discount_codes_levels = $wpdb->prefix . 'pmpro_discount_codes_levels';
 	$wpdb->pmpro_discount_codes_uses = $wpdb->prefix . 'pmpro_discount_codes_uses';
 	$wpdb->pmpro_membership_levelmeta = $wpdb->prefix . 'pmpro_membership_levelmeta';
+	$wpdb->pmpro_subscriptions = $wpdb->prefix . 'pmpro_subscriptions';
 	$wpdb->pmpro_membership_ordermeta = $wpdb->prefix . 'pmpro_membership_ordermeta';
+	$wpdb->pmpro_subscriptionmeta = $wpdb->prefix . 'pmpro_subscriptionmeta';
+	$wpdb->pmpro_groups = $wpdb->prefix . 'pmpro_groups';
+	$wpdb->pmpro_membership_levels_groups = $wpdb->prefix . 'pmpro_membership_levels_groups';
+
+	$collate = '';
+	if ( $wpdb->has_cap( 'collation' ) ) {
+		$collate = $wpdb->get_charset_collate();
+	}
+
+	/*
+	 * Indexes have a maximum size of 767 bytes. Historically, we haven't need to be concerned about that.
+	 * As of 4.2, however, we moved to utf8mb4, which uses 4 bytes per character. This means that an index which
+	 * used to have room for floor(767/3) = 255 characters, now only has room for floor(767/4) = 191 characters.
+	 *
+	 * Copied from Core WP.
+	 */
+	$max_index_length = 191;
 
 	//wp_pmpro_membership_levels
 	$sqlQuery = "
@@ -374,8 +421,8 @@ function pmpro_db_delta()
 		  PRIMARY KEY  (`id`),
 		  KEY `allow_signups` (`allow_signups`),
 		  KEY `initial_payment` (`initial_payment`),
-		  KEY `name` (`name`)
-		);
+		  KEY `name` (`name`(" . $max_index_length . "))
+		) $collate;
 	";
 	dbDelta($sqlQuery);
 
@@ -397,10 +444,7 @@ function pmpro_db_delta()
 		  `billing_phone` varchar(32) NOT NULL,
 		  `subtotal` varchar(16) NOT NULL DEFAULT '',
 		  `tax` varchar(16) NOT NULL DEFAULT '',
-		  `couponamount` varchar(16) NOT NULL DEFAULT '',
 		  `checkout_id` bigint(20) NOT NULL DEFAULT '0',
-		  `certificate_id` int(11) NOT NULL DEFAULT '0',
-		  `certificateamount` varchar(16) NOT NULL DEFAULT '',
 		  `total` varchar(16) NOT NULL DEFAULT '',
 		  `payment_type` varchar(64) NOT NULL DEFAULT '',
 		  `cardtype` varchar(32) NOT NULL DEFAULT '',
@@ -430,7 +474,7 @@ function pmpro_db_delta()
 		  KEY `affiliate_id` (`affiliate_id`),
 		  KEY `affiliate_subid` (`affiliate_subid`),
 		  KEY `checkout_id` (`checkout_id`)
-		);
+		) $collate;
 	";
 	dbDelta($sqlQuery);
 
@@ -442,7 +486,7 @@ function pmpro_db_delta()
 		  `modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 		  PRIMARY KEY (`membership_id`,`category_id`),
 		  UNIQUE KEY `category_membership` (`category_id`,`membership_id`)
-		);
+		) $collate;
 	";
 	dbDelta($sqlQuery);
 
@@ -454,7 +498,7 @@ function pmpro_db_delta()
 		  `modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 		  PRIMARY KEY (`page_id`,`membership_id`),
 		  UNIQUE KEY `membership_page` (`membership_id`,`page_id`)
-		);
+		) $collate;
 	";
 	dbDelta($sqlQuery);
 
@@ -483,7 +527,7 @@ function pmpro_db_delta()
 		   KEY `enddate` (`enddate`),
 		   KEY `user_id` (`user_id`),
 		   KEY `status` (`status`)
-		);
+		) $collate;
 	";
 	dbDelta($sqlQuery);
 
@@ -499,7 +543,7 @@ function pmpro_db_delta()
 		  UNIQUE KEY `code` (`code`),
 		  KEY `starts` (`starts`),
 		  KEY `expires` (`expires`)
-		);
+		) $collate;
 	";
 	dbDelta($sqlQuery);
 
@@ -519,7 +563,7 @@ function pmpro_db_delta()
 		  `expiration_period` varchar(10) NOT NULL,
 		  PRIMARY KEY  (`code_id`,`level_id`),
 		  KEY `initial_payment` (`initial_payment`)
-		);
+		) $collate;
 	";
 	dbDelta($sqlQuery);
 
@@ -534,7 +578,7 @@ function pmpro_db_delta()
 		  PRIMARY KEY  (`id`),
 		  KEY `user_id` (`user_id`),
 		  KEY `timestamp` (`timestamp`)
-		);
+		) $collate;
 	";
 	dbDelta($sqlQuery);
 
@@ -547,8 +591,36 @@ function pmpro_db_delta()
 		  `meta_value` longtext,
 		  PRIMARY KEY (`meta_id`),
 		  KEY `pmpro_membership_level_id` (`pmpro_membership_level_id`),
-		  KEY `meta_key` (`meta_key`)
-		);
+		  KEY `meta_key` (`meta_key`(" . $max_index_length . "))
+		) $collate;
+	";
+	dbDelta($sqlQuery);
+
+	//pmpro_membership_subscriptions
+	$sqlQuery = "
+		CREATE TABLE `" . $wpdb->pmpro_subscriptions . "` (
+			`id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			`user_id` int(11) unsigned NOT NULL,
+			`membership_level_id` int(20) unsigned NOT NULL,
+			`gateway` varchar(64) NOT NULL,
+			`gateway_environment` varchar(64) NOT NULL,
+			`subscription_transaction_id` varchar(32) NOT NULL,
+			`status` varchar(20) NOT NULL DEFAULT 'active',
+			`startdate` datetime DEFAULT NULL,
+			`enddate` datetime DEFAULT NULL,
+			`next_payment_date` datetime DEFAULT NULL,
+			`billing_amount` decimal(18,8) NOT NULL DEFAULT '0.00',
+			`cycle_number` int(11) NOT NULL DEFAULT '0',
+			`cycle_period` varchar(10) NOT NULL DEFAULT 'Month',
+			`billing_limit` int(11) NOT NULL DEFAULT '0',
+			`trial_amount` decimal(18,8) NOT NULL DEFAULT '0.00',
+			`trial_limit` int(11) NOT NULL DEFAULT '0',
+			`modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			PRIMARY KEY (`id`),
+			UNIQUE KEY `subscription_link` (`subscription_transaction_id`, `gateway_environment`, `gateway`),
+			KEY `user_id` (`user_id`),
+			KEY `next_payment_date` (`next_payment_date`)
+		) $collate;
 	";
 	dbDelta($sqlQuery);
 
@@ -561,8 +633,48 @@ function pmpro_db_delta()
 		  `meta_value` longtext,
 		  PRIMARY KEY (`meta_id`),
 		  KEY `pmpro_membership_order_id` (`pmpro_membership_order_id`),
-		  KEY `meta_key` (`meta_key`)
-		);
+		  KEY `meta_key` (`meta_key`(" . $max_index_length . "))
+		) $collate;
+	";
+	dbDelta($sqlQuery);
+
+	//pmpro_subscriptionmeta
+	$sqlQuery = "
+		CREATE TABLE `" . $wpdb->pmpro_subscriptionmeta . "` (
+		  `meta_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		  `pmpro_subscription_id` int(11) unsigned NOT NULL,
+		  `meta_key` varchar(255) NOT NULL,
+		  `meta_value` longtext,
+		  PRIMARY KEY (`meta_id`),
+		  KEY `pmpro_subscription_id` (`pmpro_subscription_id`),
+		  KEY `meta_key` (`meta_key`(" . $max_index_length . "))
+		) $collate;
+	";
+	dbDelta($sqlQuery);
+
+	//pmpro_groups
+	$sqlQuery = "
+		CREATE TABLE `" . $wpdb->pmpro_groups . "` (
+		 `id` int unsigned NOT NULL AUTO_INCREMENT,
+		 `name` varchar(255) NOT NULL,
+		 `allow_multiple_selections` tinyint NOT NULL DEFAULT '1',
+		 `displayorder` int,
+		 PRIMARY KEY (`id`),
+		 KEY `name` (`name`(" . $max_index_length . "))
+		) $collate;
+	";
+	dbDelta($sqlQuery);
+
+	//pmpro_membership_levels_groups
+	$sqlQuery = "
+		CREATE TABLE `" . $wpdb->pmpro_membership_levels_groups . "` (
+		 `id` int unsigned NOT NULL AUTO_INCREMENT,
+		 `level` int unsigned NOT NULL DEFAULT '0',
+		 `group` int unsigned NOT NULL DEFAULT '0',
+		 PRIMARY KEY (`id`),
+		 KEY `level` (`level`),
+		 KEY `group` (`group`)
+		) $collate;
 	";
 	dbDelta($sqlQuery);
 }
