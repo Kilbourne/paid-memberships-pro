@@ -969,8 +969,7 @@ function pmpro_cancelMembershipLevel( $level_id, $user_id = null, $status = 'ina
  *		No change returns null.
  */
 function pmpro_changeMembershipLevel( $level, $user_id = null, $old_level_status = 'inactive', $cancel_level = null ) {
-	global $wpdb;
-	global $current_user, $pmpro_error;
+	global $current_user, $pmpro_error, $wpdb, $pmpro_giving_level;
 
 	if ( empty( $user_id ) ) {
 		$user_id = $current_user->ID;
@@ -1134,8 +1133,8 @@ function pmpro_changeMembershipLevel( $level, $user_id = null, $old_level_status
 			}
 		}
 	}
-
-	// insert current membership
+	
+	// Insert current membership
 	if ( ! empty( $level ) ) {
 		// make sure the dates are in good formats
 		if ( is_array( $level ) ) {
@@ -1225,18 +1224,8 @@ function pmpro_changeMembershipLevel( $level, $user_id = null, $old_level_status
 		}
 	}
 
-	// remove cached level
-	global $all_membership_levels;
-	unset( $all_membership_levels[ $user_id ] );
-
-	// remove levels cache for user
-	$cache_key = 'user_' . $user_id . '_levels';
-	wp_cache_delete( $cache_key, 'pmpro' );
-	wp_cache_delete( $cache_key . '_all', 'pmpro' );
-	wp_cache_delete( $cache_key . '_active', 'pmpro' );
-
-	// update user data and call action
-	pmpro_set_current_user();
+	// Clear the level cache for this user.
+	pmpro_clear_level_cache_for_user( $user_id );
 
 	/**
 	 * Action to run after the membership level changes.
@@ -1247,6 +1236,42 @@ function pmpro_changeMembershipLevel( $level, $user_id = null, $old_level_status
 	 */
 	do_action( 'pmpro_after_change_membership_level', $level_id, $user_id, $cancel_level );
 	return true;
+}
+
+/**
+ * Set old user levels to be used in the pmpro_do_action_after_all_membership_level_changes() function.
+ *
+ * @param int $user_id ID of the user to set the old levels for.
+ */
+function pmpro_set_old_user_levels( $user_id ) {
+	global $pmpro_old_user_levels;
+	if ( empty( $pmpro_old_user_levels ) ) {
+		$pmpro_old_user_levels = array();
+	}
+	if ( ! array_key_exists( $user_id, $pmpro_old_user_levels ) ) {
+		$old_levels = pmpro_getMembershipLevelsForUser( $user_id );
+		$pmpro_old_user_levels[$user_id] = empty( $old_levels ) ? array() : $old_levels;
+	}
+}
+
+/**
+ * Clear the membership level cache for a user.
+ *
+ * @param int $user_id ID of the user to clear the cache for.
+ */
+function pmpro_clear_level_cache_for_user( $user_id ) {
+	// Removed cached global.
+	global $all_membership_levels;
+	unset( $all_membership_levels[ $user_id ] );
+
+	// Remove levels cache for user.
+	$cache_key = 'user_' . $user_id . '_levels';
+	wp_cache_delete( $cache_key, 'pmpro' );
+	wp_cache_delete( $cache_key . '_all', 'pmpro' );
+	wp_cache_delete( $cache_key . '_active', 'pmpro' );
+
+	// Update user data.
+	pmpro_set_current_user();
 }
 
 /**
@@ -2259,11 +2284,14 @@ function pmpro_getLevel( $level ) {
 /**
  * Get all PMPro membership levels.
  *
+ * @since 3.0 deprecated the second `$use_cache` argument.
+ *
  * @param bool $include_hidden Include levels marked as hidden/inactive.
- * @param bool $use_cache      If false, use $pmpro_levels global. If true use other caches.
- * @param bool $force          Resets the static var caches as well.
+ * @param bool $deprecated_argument No longer used.
+ * @param bool $force               Resets the static var caches.
  */
-function pmpro_getAllLevels( $include_hidden = false, $use_cache = false, $force = false ) {
+function pmpro_getAllLevels( $include_hidden = false, $deprecated_argument = false, $force = false ) {
+	// The global $pmpro_levels variable is deprecated and should no longer be used, but we'll set it for backwards compatibility.
 	global $pmpro_levels, $wpdb;
 
 	static $pmpro_all_levels;			// every single level
@@ -2275,16 +2303,13 @@ function pmpro_getAllLevels( $include_hidden = false, $use_cache = false, $force
 		$pmpro_visible_levels = NULL;
 	}
 
-	// just use the $pmpro_levels global
-	if ( ! empty( $pmpro_levels ) && ! $use_cache ) {
-		return $pmpro_levels;
-	}
-
 	// If use_cache is true check if we have something in a static var.
 	if ( $include_hidden && isset( $pmpro_all_levels ) ) {
+		$pmpro_levels = $pmpro_all_levels;
 		return $pmpro_all_levels;
 	}
 	if ( ! $include_hidden && isset( $pmpro_visible_levels ) ) {
+		$pmpro_levels = $pmpro_visible_levels;
 		return $pmpro_visible_levels;
 	}
 
@@ -2501,7 +2526,7 @@ function pmpro_getCheckoutButton( $level_id, $button_text = null, $classes = nul
 	}
 
 	if ( ! empty( $level_id ) ) {
-		$r = '<a href="' . esc_url( pmpro_url( 'checkout', '?level=' . $level_id ) ) . '" class="' . esc_attr( $classes ) . '">' . wp_kses_post( $button_text ) . '</a>';
+		$r = '<a href="' . esc_url( pmpro_url( 'checkout', '?pmpro_level=' . $level_id ) ) . '" class="' . esc_attr( $classes ) . '">' . wp_kses_post( $button_text ) . '</a>';
 	} else {
 		$r = '<a href="' . esc_url( pmpro_url( 'checkout' ) ) . '" class="' . esc_attr( $classes ) . '">' . wp_kses_post( $button_text ) . '</a>';
 	}
@@ -2636,11 +2661,13 @@ function pmpro_showMessage() {
 			'class' => array(),
 		),
 		'strong' => array(),
+		'ul' => array(),
+		'li' => array(),
 	);
 
 	if ( ! empty( $pmpro_msg ) ) {		
 		?>
-		<div role="alert" class="<?php echo esc_attr( pmpro_get_element_class( 'pmpro_msg ' . $pmpro_msgt, $pmpro_msgt ) ); ?>">
+		<div role="alert" id="pmpro_message" class="<?php echo esc_attr( pmpro_get_element_class( 'pmpro_message ' . $pmpro_msgt, $pmpro_msgt ) ); ?>">
 			<p><?php echo wp_kses( $pmpro_msg, $allowed_html ); ?></p>
 		</div>
 		<?php
@@ -4420,19 +4447,6 @@ function pmpro_is_paused() {
 
 	// We should never filter this function. We will never change this function to do anything else without lots and lots of discussion and thought.
 	return false;
-}
-
-/**
- * Set the pause mode status
- *
- * @param $state bool true or false if in pause mode state
- * @since 2.10
- * @deprecated 2.10.7 No longer using `pmpro_pause_mode` option
- * @return bool True if the option has been updated
- */
-function pmpro_set_pause_mode( $state ) {
-	_deprecated_function( __FUNCTION__, '2.10.7' );
-	return update_option( 'pmpro_pause_mode', $state );
 }
 
 /**
