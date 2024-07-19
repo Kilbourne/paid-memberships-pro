@@ -13,40 +13,49 @@
 function pmpro_member_shortcode( $atts, $content = null, $shortcode_tag = '' ) {
 	global $current_user;
 
-	extract(shortcode_atts(array(
-		'user_id' => $current_user->ID,
-		'field' => NULL
-	), $atts));
-	
-	//Bail if there's no field attribute
-	if( empty( $field ) ) {
-		esc_html_e( 'The "field" attribute is required in the pmpro_member shortcode.', 'paid-memberships-pro' );
-		return;
-	}
-	
-	/*
-		- pmpro_next_payment()
-		- 
-	*/
+	// Get the attributes and their defaults.
+	extract(
+		shortcode_atts(
+			array(
+				'user_id' => $current_user->ID,
+				'field'   => null,
+				'levels'  => null,
+			),
+			$atts
+		)
+	);
 
-	//membership level fields
+	// Bail if there's no field attribute.
+	if ( empty( $field ) ) {
+		return esc_html__( 'The "field" attribute is required in the pmpro_member shortcode.', 'paid-memberships-pro' );
+	}
+
+	// Get a list of fields related to the user's level.
 	$pmpro_level_fields = array(
 		'membership_id',
 		'membership_name',
 		'membership_description',
 		'membership_confirmation',
 		'membership_initial_payment',
+		'membership_startdate',
+		'membership_enddate',
+		'level_cost',
+	);
+
+	// Get a list of fields related to the user's subscription.
+	$pmpro_subscription_fields = array(
 		'membership_billing_amount',
 		'membership_cycle_number',
 		'membership_cycle_period',
 		'membership_billing_limit',
 		'membership_trial_amount',
 		'membership_trial_limit',
-		'membership_startdate',
-		'membership_enddate',
+		'next_payment_date',
 	);
 
-	//pmpro-related fields stored in user meta
+	// Get a list of pmpro-related fields stored in user meta.
+	// Note: Most of this information is no longer stored in user meta.
+	//       These will likely be deprecated in the future. Use with caution.
 	$pmpro_user_meta_fields = array(
 		'bfirstname',
 		'blastname',
@@ -89,25 +98,50 @@ function pmpro_member_shortcode( $atts, $content = null, $shortcode_tag = '' ) {
 		'trial_amount',
 	);
 
-	if($field == 'level_cost') {
-		$membership_level = pmpro_getMembershipLevelForUser($user_id);
-		if( !empty($membership_level ) )
-			$r = pmpro_getLevelCost($membership_level, false, true);
-		else
+	if ( in_array( $field, $pmpro_level_fields ) || in_array( $field, $pmpro_subscription_fields ) ) {
+		// Fields about the user's membership or subscription.
+		// Get the membership level to show.
+		$membership_level = null;
+		if ( empty( $levels ) ) {
+			// Grab any one of the user's levels.
+			$membership_level = pmpro_getMembershipLevelForUser( $user_id );
+		} else {
+			// Grab the first level in the list.
+			$levels = explode( ',', $levels );
+			foreach ( $levels as $level_id ) {
+				$membership_level = pmpro_getSpecificMembershipLevelForUser( $user_id, $level_id );
+				if ( ! empty( $membership_level ) ) {
+					break;
+				}
+			}
+		}
+
+		if ( empty( $membership_level ) ) {
+			// No level found.
 			$r = '';
-	} elseif($field == 'next_payment_date') {
-		//next_payment_date
-		$r = pmpro_next_payment($user_id);
-	} elseif(in_array( $field, $pmpro_level_fields )) {
-		//membership level fields
-		$field = str_replace('membership_', '', $field);
-		$membership_level = pmpro_getMembershipLevelForUser($user_id);
-		if(!empty($membership_level))
-			$r = $membership_level->{$field};
-		else
-			$r = '';
-	} elseif(in_array( $field, $pmpro_user_meta_fields )) {
-		//pmpro-related fields stored in user meta
+		} elseif ( in_array( $field, $pmpro_level_fields ) ) {
+			// Membership level fields.
+			if ( $field === 'level_cost' ) {
+				// Special case for level_cost.
+				$r = pmpro_getLevelCost( $membership_level, false, true );
+			} else {
+				// All other fields.
+				$field = str_replace( 'membership_', '', $field );
+				$r     = $membership_level->{$field};
+			}
+		} else {
+			// Subscription fields.
+			$subscriptions = PMPro_Subscription::get_subscriptions_for_user( $user_id, $membership_level->id );
+			if ( empty( $subscriptions ) ) {
+				// No subscription found.
+				$r = '';
+			} else {
+				$field = str_replace( 'membership_', '', $field );
+				$r     = call_user_func( array( $subscriptions[0], 'get_' . $field ) );
+			}
+		}
+	} elseif ( in_array( $field, $pmpro_user_meta_fields ) ) {
+		// PMPro-related fields stored in user meta.
 		$field = 'pmpro_' . $field;
 		$r = get_user_meta($user_id, $field, true );
 	} elseif ( in_array( $field, $user_column_fields ) ) {
