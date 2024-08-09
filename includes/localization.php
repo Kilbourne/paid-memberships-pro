@@ -8,6 +8,8 @@ function pmpro_load_textdomain() {
 	$mofile_global = WP_LANG_DIR . '/pmpro/' . $mofile;
 	$mofile_global2 = WP_LANG_DIR . '/paid-memberships-pro/' . $mofile;
 
+	unload_textdomain( 'paid-memberships-pro' );
+
 	//load global first    
 	if ( file_exists( $mofile_global ) ) {
 		load_textdomain( 'paid-memberships-pro', $mofile_global );
