@@ -1743,6 +1743,70 @@
 		}
 
 		/**
+		 * Get the PMPro_Subscription object for this order.
+		 * If the subscription doesn't exist, it will be created.
+		 *
+		 * @return PMPro_Subscription|null The subscription object or null if the order is not a subscription.
+		 */
+		public function get_subscription() {
+			// Make sure that this order is a part of a subscription.
+			if ( empty( $this->subscription_transaction_id ) || empty( $this->gateway ) || empty( $this->gateway_environment ) ) {
+				// We don't have all the info needed for a subscription. Bail.
+				return null;
+			}
+
+			$get_subscription_args = array(
+				'subscription_transaction_id' => $this->subscription_transaction_id,
+				'gateway'                     => $this->gateway,
+				'gateway_environment'  	      => $this->gateway_environment,
+			);
+			$existing_subscription = PMPro_Subscription::get_subscription( $get_subscription_args );
+			if ( ! empty( $existing_subscription ) ) {
+				// We already have a subscription for this order, return it.
+				return $existing_subscription;
+			}
+
+			// Only create a subscription if this order is complete.
+			if ( 'success' !== $this->status ) {
+				// The order is not complete, so it isn't a valid subscription payment.
+				return null;
+			}
+
+			if ( pmpro_is_checkout() ) {
+				// We are processing a checkout. Get the level from the checkout.
+				$subscription_level = $this->getMembershipLevelAtCheckout();
+			} else {
+				// Not at checkout. Get the level from the database.
+				$subscription_level = $this->getMembershipLevel();
+			}
+
+			if ( empty( $subscription_level ) ) {
+				// We couldn't get level information, so we shouldn't create a subscription.
+				return null;
+			}
+
+			$create_subscription_args = array(
+				'user_id'                     => $this->user_id,
+				'membership_level_id'  		  => $this->membership_id,
+				'gateway'                     => $this->gateway,
+				'gateway_environment'  	      => $this->gateway_environment,
+				'subscription_transaction_id' => $this->subscription_transaction_id,
+				'status'                      => 'active',
+				'billing_amount'              => empty( $subscription_level->billing_amount ) ? 0.00 : $subscription_level->billing_amount,
+				'cycle_number'                => empty( $subscription_level->cycle_number ) ? 0 : $subscription_level->cycle_number,
+				'cycle_period'                => empty( $subscription_level->cycle_period ) ? 'Month' : $subscription_level->cycle_period,
+				'billing_limit'               => empty( $subscription_level->billing_limit ) ? 0 : $subscription_level->billing_limit,
+				'trial_amount'                => empty( $subscription_level->trial_amount ) ? 0.00 : $subscription_level->trial_amount,
+				'trial_limit'                 => empty( $subscription_level->trial_limit ) ? 0 : $subscription_level->trial_limit,
+				'startdate'                   => date_i18n( 'Y-m-d H:i:s', $this->timestamp ),
+				'next_payment_date'           => empty( $this->ProfileStartDate ) ? date_i18n( 'Y-m-d H:i:s', strtotime( '+ ' . $subscription_level->cycle_number . ' ' . $subscription_level->cycle_period, (int)$this->timestamp ) ) : $this->ProfileStartDate,
+			);
+
+			$new_subscription = PMPro_Subscription::create( $create_subscription_args );
+			return ! empty( $new_subscription ) ? $new_subscription : null;
+		}
+
+		/**
 		 * Sets the billing address fields on the order object.
 		 * Checks the last order for the same sub or pulls from user meta.
 		 * @since 2.5.5
