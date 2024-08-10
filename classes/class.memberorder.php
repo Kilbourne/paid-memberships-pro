@@ -251,6 +251,8 @@
 		 *
 		 * @var int|null
 		 */
+		private $discount_code_id = null;
+
 		/**
 		 * Defines an array of optionally used properties
 		 *
@@ -306,6 +308,20 @@
 		 * @return mixed|void
 		 */
 		public function __get( $property ) {
+			/**
+			 * Special case. We want to add `discount_code_id` as a property/db column in the future.
+			 * For now, we should support `discount_code_id` as a "property" by adding it here and
+			 * querying the pmpro_discount_codes_uses table for the discount code ID.
+			 *
+			 * @DISCOUNT_CODE_ID_TODO
+			 */
+			if ( $property == 'discount_code_id' ) {
+				if ( null === $this->discount_code_id ) {
+					// Get the discount code ID from the pmpro_discount_codes_uses table.
+					$this->getDiscountCode( true );
+				}
+				return $this->discount_code_id;
+			}
 
 			if ( $property == 'other_properties' ) {
 				return; //We don't want the actual other_properties array to be changed
@@ -335,6 +351,17 @@
 
 			if ( $property == 'other_properties' ) {
 				return; //We don't want the actual other_properties array to be changed
+			}
+
+			/**
+			 * Special case. We want to add `discount_code_id` as a property/db column in the future.
+			 * For now, `discount_code_id` may be null or an int. But if being updated, we always want it to be an int.
+			 *
+			 * @DISCOUNT_CODE_ID_TODO
+			 */
+			if ( $property == 'discount_code_id' ) {
+				$this->discount_code_id = (int) $value;
+				return;
 			}
 
 			if ( property_exists( $this, $property ) ) {
@@ -566,6 +593,23 @@
 				}
 			}
 
+			// Filter by discount code ID
+			/**
+			 * Special case. Eventually, we want to add `discount_code_id` as a property/db column. But
+			 * for now, we need to query the pmpro_discount_codes_uses table for the discount code ID.
+			 *
+			 * @DISCOUNT_CODE_ID_TODO
+			 */
+			if ( isset( $args['discount_code_id'] ) ) {
+				$sql_query .= " LEFT JOIN `$wpdb->pmpro_discount_codes_uses` `dcu` ON `dcu`.`order_id` = `o`.`id`";
+				if ( ! is_array( $args['discount_code_id'] ) ) {
+					$where[]    = '`dcu`.`code_id` = %d';
+					$prepared[] = $args['discount_code_id'];
+				} else {
+					$where[]  = '`dcu`.`code_id` IN ( ' . implode( ', ', array_fill( 0, count( $args['discount_code_id'] ), '%d' ) ) . ' )';
+					$prepared = array_merge( $prepared, $args['discount_code_id'] );
+				}
+      }
 			// Maybe filter the data.
 			if ( $where ) {
 				$sql_query .= ' WHERE ' . implode( ' AND ', $where );
