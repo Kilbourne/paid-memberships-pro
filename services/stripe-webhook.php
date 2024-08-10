@@ -12,8 +12,6 @@
 	// For compatibility with old library (Namespace Alias)
 	use Stripe\Invoice as Stripe_Invoice;
 	use Stripe\Event as Stripe_Event;
-	use Stripe\PaymentIntent as Stripe_PaymentIntent;
-	use Stripe\Charge as Stripe_Charge;
 	use Stripe\PaymentMethod as Stripe_PaymentMethod;
 	use Stripe\Customer as Stripe_Customer;
 
@@ -366,8 +364,8 @@
 		elseif($pmpro_stripe_event->type == "customer.subscription.deleted")
 		{
 			$logstr .= pmpro_handle_subscription_cancellation_at_gateway( $pmpro_stripe_event->data->object->id, 'stripe', $livemode ? 'live' : 'sandbox' );
-					pmpro_stripeWebhookExit();
-				}
+			pmpro_stripeWebhookExit();
+		}
 		elseif( $pmpro_stripe_event->type == "charge.refunded" )
 		{			
 			$payment_transaction_id = $pmpro_stripe_event->data->object->id;
@@ -608,151 +606,6 @@
 		pmpro_stripeWebhookExit();
 	}
 
-	/**
-	 * @deprecated 2.7.0.
-	 */
-	function getUserFromInvoiceEvent($pmpro_stripe_event) {
-		_deprecated_function( __FUNCTION__, '2.7.0' );
-		//pause here to give PMPro a chance to finish checkout
-		sleep(PMPRO_STRIPE_WEBHOOK_DELAY);
-
-		global $wpdb;
-
-		$customer_id = $pmpro_stripe_event->data->object->customer;
-
-		//look up the order
-		$user_id = $wpdb->get_var("SELECT user_id FROM $wpdb->pmpro_membership_orders WHERE subscription_transaction_id = '" . esc_sql($customer_id) . "' LIMIT 1");
-
-		if(!empty($user_id))
-			return get_userdata($user_id);
-		else
-			return false;
-	}
-
-	/**
-	 * @deprecated 2.7.0.
-	 */
-	function getUserFromCustomerEvent($pmpro_stripe_event, $status = false, $checkplan = true) {
-		_deprecated_function( __FUNCTION__, '2.7.0' );
-
-		//pause here to give PMPro a chance to finish checkout
-		sleep(PMPRO_STRIPE_WEBHOOK_DELAY);
-
-		global $wpdb;
-
-		$customer_id = $pmpro_stripe_event->data->object->customer;
-		$subscription_id = $pmpro_stripe_event->data->object->id;
-		$plan_id = $pmpro_stripe_event->data->object->plan->id;
-
-		//look up the order
-		$sqlQuery = "SELECT user_id FROM $wpdb->pmpro_membership_orders WHERE (subscription_transaction_id = '" . esc_sql($customer_id) . "' OR subscription_transaction_id = '"  . esc_sql($subscription_id) . "') ";
-		if($status)
-			$sqlQuery .= " AND status='" . esc_sql($status) . "' ";
-		if($checkplan)
-			$sqlQuery .= " AND code='" . esc_sql($plan_id) . "' ";
-		$sqlQuery .= " LIMIT 1";
-
-		$user_id = $wpdb->get_var($sqlQuery);
-
-		if(!empty($user_id))
-			return get_userdata($user_id);
-		else
-			return false;
-	}
-
-   	/**
-		* Get the Member's Order from a Stripe Event.
-		*
-		* @deprecated 2.10
-		*
-		* @param Object $pmpro_stripe_event The Stripe Event object sent via webhook.
-		* @return PMPro_MemberOrder|bool Returns either the member order object linked to the Stripe Event data or false if no order is found.
-		*/
-	function getOldOrderFromInvoiceEvent( $pmpro_stripe_event ) {	
-		_deprecated_function( __FUNCTION__, '2.10' );
-
-		// Pause here to give PMPro a chance to finish checkout.
-		sleep( PMPRO_STRIPE_WEBHOOK_DELAY );
-
-		global $wpdb;
-
-		// Check if the Stripe event has a subscription ID available. (Most likely an older API version).
-		if ( ! empty( $pmpro_stripe_event->data->object->subscription ) ) {
-            $subscription_id = $pmpro_stripe_event->data->object->subscription;
-		}
-
-		// Try to get the subscription ID from the order ID.
-		if ( empty( $subscription_id ) ) {
-			// Try to get the order ID from the invoice ID in the event.
-			$invoice_id = $pmpro_stripe_event->data->object->invoice;
-
-			try {
-				$invoice = Stripe_Invoice::retrieve( $invoice_id );
-			} catch ( Exception $e ) {
-				error_log( 'Unable to fetch Stripe Invoice object: ' . $e->getMessage() );
-				$invoice = null;
-			}
-
-			if ( isset( $invoice->subscription ) ) { 
-				$subscription_id = $invoice->subscription;
-			} else {
-				// Fall back to the Stripe event ID as a last resort.
-				$subscription_id = $pmpro_stripe_event->data->object->id;
-			}
-			
-			// Try to get the order ID from the subscription ID if we have one.			
-			if ( ! empty( $subscription_id ) ) {				
-				$old_order_id = $wpdb->get_var(
-					$wpdb->prepare(
-						"
-							SELECT id
-							FROM $wpdb->pmpro_membership_orders
-							WHERE
-								subscription_transaction_id = %s
-								AND gateway = 'stripe'
-							ORDER BY timestamp DESC
-							LIMIT 1
-						",
-						$subscription_id
-					)
-				);
-			}			
-		}
-
-		// If we have an ID, get the associated MemberOrder.
-		if ( ! empty( $old_order_id ) ) {
-
-			$old_order = new MemberOrder( $old_order_id );
-
-			if ( isset( $old_order->id ) && ! empty( $old_order->id ) ) {
-				return $old_order;
-			}	
-		}
-
-		return false;
-	}
-
-	/**
-	 * @deprecated 2.10
-	 */
-	function getOrderFromInvoiceEvent($pmpro_stripe_event) {
-		_deprecated_function( __FUNCTION__, '2.10' );
-
-		//pause here to give PMPro a chance to finish checkout
-		sleep(PMPRO_STRIPE_WEBHOOK_DELAY);
-
-		$invoice_id = $pmpro_stripe_event->data->object->id;
-
-		//get order by invoice id
-		$order = new MemberOrder();
-		$order->getMemberOrderByPaymentTransactionID($invoice_id);		
-		
-		if(!empty($order->id))
-			return $order;
-		else
-			return false;
-	}
-
 	function pmpro_stripeWebhookExit()
 	{
 		global $logstr;
@@ -814,9 +667,6 @@
  * @return bool
  */
 function pmpro_stripe_webhook_change_membership_level( $morder ) {
-	// Make sure that we don't redirect back to Stripe Checkout.
-	remove_action(  'pmpro_checkout_before_change_membership_level', array('PMProGateway_stripe', 'pmpro_checkout_before_change_membership_level'), 10, 2 );
-
 	pmpro_pull_checkout_data_from_order( $morder );
  	return pmpro_complete_async_checkout( $morder );
 }
