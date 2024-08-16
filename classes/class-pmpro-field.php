@@ -228,7 +228,7 @@ class PMPro_Field {
 	public $options = array();
 
 	/**
-	 * Whether multiple options should be selectable when using a select, seelect2, or multiselect field type.
+	 * Whether multiple options should be selectable when using a select, select2, or multiselect field type.
 	 *
 	 * @since 2.9
 	 *
@@ -535,7 +535,7 @@ class PMPro_Field {
 			
 			//let's not expect more than 50 files with the same name
 			if($count > 50)
-				die( __( "Error uploading file. Too many files with the same name.", "paid-memberships-pro" ) );
+				die( esc_html__( "Error uploading file. Too many files with the same name.", "paid-memberships-pro" ) );
 		}
 
 		$file_path = $dir_path . $filename;
@@ -609,7 +609,7 @@ class PMPro_Field {
 	//echo the HTML for the field
 	function display($value = NULL)
 	{
-		echo $this->getHTML($value);
+		echo $this->getHTML($value); //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		return;
 	}
 	

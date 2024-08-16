@@ -489,95 +489,92 @@
 
 			/*
 			 * Now filter the query based on the arguments provided.
-			 *
-			 * isset( $arg ) && null !== $arg is meant to deal with $args['arg'] = null usage
-			 * while still supporting $args['arg'] = ''.
 			 */
 
 			// Filter by ID(s).
-			if ( isset( $args['id'] ) && null !== $args['id'] ) {
+			if ( isset( $args['id'] ) ) {
 				if ( ! is_array( $args['id'] ) ) {
-					$where[]    = 'id = %d';
+					$where[]    = '`o`.`id` = %d';
 					$prepared[] = $args['id'];
 				} else {
-					$where[]  = 'id IN ( ' . implode( ', ', array_fill( 0, count( $args['id'] ), '%d' ) ) . ' )';
+					$where[]  = '`o`.`id` IN ( ' . implode( ', ', array_fill( 0, count( $args['id'] ), '%d' ) ) . ' )';
 					$prepared = array_merge( $prepared, $args['id'] );
 				}
 			}
 
 			// Filter by user ID(s).
-			if ( isset( $args['user_id'] ) && null !== $args['user_id'] ) {
+			if ( isset( $args['user_id'] ) ) {
 				if ( ! is_array( $args['user_id'] ) ) {
-					$where[]    = 'user_id = %d';
+					$where[]    = '`o`.`user_id` = %d';
 					$prepared[] = $args['user_id'];
 				} else {
-					$where[]  = 'user_id IN ( ' . implode( ', ', array_fill( 0, count( $args['user_id'] ), '%d' ) ) . ' )';
+					$where[]  = '`o`.`user_id` IN ( ' . implode( ', ', array_fill( 0, count( $args['user_id'] ), '%d' ) ) . ' )';
 					$prepared = array_merge( $prepared, $args['user_id'] );
 				}
 			}
 
 			// Filter by membership level ID(s).
-			if ( isset( $args['membership_level_id'] ) && null !== $args['membership_level_id'] ) {
+			if ( isset( $args['membership_level_id'] ) ) {
 				if ( ! is_array( $args['membership_level_id'] ) ) {
-					$where[]    = 'membership_id = %d';
+					$where[]    = '`o`.`membership_id` = %d';
 					$prepared[] = $args['membership_level_id'];
 				} else {
-					$where[]  = 'membership_id IN ( ' . implode( ', ', array_fill( 0, count( $args['membership_level_id'] ), '%d' ) ) . ' )';
+					$where[]  = '`o`.`membership_id` IN ( ' . implode( ', ', array_fill( 0, count( $args['membership_level_id'] ), '%d' ) ) . ' )';
 					$prepared = array_merge( $prepared, $args['membership_level_id'] );
 				}
 			}
 
 			// Filter by status(es).
-			if ( isset( $args['status'] ) && null !== $args['status'] ) {
+			if ( isset( $args['status'] ) ) {
 				if ( ! is_array( $args['status'] ) ) {
-					$where[]    = 'status = %s';
+					$where[]    = '`o`.`status` = %s';
 					$prepared[] = $args['status'];
 				} else {
-					$where[]  = 'status IN ( ' . implode( ', ', array_fill( 0, count( $args['status'] ), '%s' ) ) . ' )';
+					$where[]  = '`o`.`status` IN ( ' . implode( ', ', array_fill( 0, count( $args['status'] ), '%s' ) ) . ' )';
 					$prepared = array_merge( $prepared, $args['status'] );
 				}
 			}
 
 			// Filter by subscription transaction ID(s).
-			if ( isset( $args['subscription_transaction_id'] ) && null !== $args['subscription_transaction_id'] ) {
+			if ( isset( $args['subscription_transaction_id'] ) ) {
 				if ( ! is_array( $args['subscription_transaction_id'] ) ) {
-					$where[]    = 'subscription_transaction_id = %s';
+					$where[]    = '`o`.`subscription_transaction_id` = %s';
 					$prepared[] = $args['subscription_transaction_id'];
 				} else {
-					$where[]  = 'subscription_transaction_id IN ( ' . implode( ', ', array_fill( 0, count( $args['subscription_transaction_id'] ), '%s' ) ) . ' )';
+					$where[]  = '`o`.`subscription_transaction_id` IN ( ' . implode( ', ', array_fill( 0, count( $args['subscription_transaction_id'] ), '%s' ) ) . ' )';
 					$prepared = array_merge( $prepared, $args['subscription_transaction_id'] );
 				}
 			}
 
 			// Filter by gateway(s).
-			if ( isset( $args['gateway'] ) && null !== $args['gateway'] ) {
+			if ( isset( $args['gateway'] ) ) {
 				if ( ! is_array( $args['gateway'] ) ) {
-					$where[]    = 'gateway = %s';
+					$where[]    = '`o`.`gateway` = %s';
 					$prepared[] = $args['gateway'];
 				} else {
-					$where[]  = 'gateway IN ( ' . implode( ', ', array_fill( 0, count( $args['gateway'] ), '%s' ) ) . ' )';
+					$where[]  = '`o`.`gateway` IN ( ' . implode( ', ', array_fill( 0, count( $args['gateway'] ), '%s' ) ) . ' )';
 					$prepared = array_merge( $prepared, $args['gateway'] );
 				}
 			}
 
 			// Filter by gateway environment(s).
-			if ( isset( $args['gateway_environment'] ) && null !== $args['gateway_environment'] ) {
+			if ( isset( $args['gateway_environment'] ) ) {
 				if ( ! is_array( $args['gateway_environment'] ) ) {
-					$where[]    = 'gateway_environment = %s';
+					$where[]    = '`o`.`gateway_environment` = %s';
 					$prepared[] = $args['gateway_environment'];
 				} else {
-					$where[]  = 'gateway_environment IN ( ' . implode( ', ', array_fill( 0, count( $args['gateway_environment'] ), '%s' ) ) . ' )';
+					$where[]  = '`o`.`gateway_environment` IN ( ' . implode( ', ', array_fill( 0, count( $args['gateway_environment'] ), '%s' ) ) . ' )';
 					$prepared = array_merge( $prepared, $args['gateway_environment'] );
 				}
 			}
 
 			// Filter by billing amount(s).
-			if ( isset( $args['total'] ) && null !== $args['total'] ) {
+			if ( isset( $args['total'] ) ) {
 				if ( ! is_array( $args['total'] ) ) {
-					$where[]    = 'total = %f';
+					$where[]    = '`o`.`total` = %f';
 					$prepared[] = $args['total'];
 				} else {
-					$where[]  = 'total IN ( ' . implode( ', ', array_fill( 0, count( $args['total'] ), '%f' ) ) . ' )';
+					$where[]  = '`o`.`total` IN ( ' . implode( ', ', array_fill( 0, count( $args['total'] ), '%f' ) ) . ' )';
 					$prepared = array_merge( $prepared, $args['total'] );
 				}
 			}
@@ -659,41 +656,13 @@
 		 */
 		function getEmptyMemberOrder()
 		{
-
 			//defaults
-			$order = new stdClass();
-			$order->code = $this->getRandomCode();
-			$order->user_id = "";
-			$order->membership_id = "";
-			$order->subtotal = "";
-			$order->tax = "";
-			$order->couponamount = "";
-			$order->total = "";
-			$order->payment_type = "";
-			$order->cardtype = "";
-			$order->accountnumber = "";
-			$order->expirationmonth = "";
-			$order->expirationyear = "";
-			$order->status = "success";
-			$order->gateway = get_option("pmpro_gateway");
-			$order->gateway_environment = get_option("pmpro_gateway_environment");
-			$order->payment_transaction_id = "";
-			$order->subscription_transaction_id = "";
-			$order->affiliate_id = "";
-			$order->affiliate_subid = "";
-			$order->notes = "";
-			$order->checkout_id = 0;
+			$this->code = $this->getRandomCode();
+			$this->status = "success";
+			$this->gateway = get_option("pmpro_gateway");
+			$this->gateway_environment = get_option("pmpro_gateway_environment");
 
-			$order->billing = new stdClass();
-			$order->billing->name = "";
-			$order->billing->street = "";
-			$order->billing->city = "";
-			$order->billing->state = "";
-			$order->billing->zip = "";
-			$order->billing->country = "";
-			$order->billing->phone = "";
-
-			return $order;
+			return $this;
 		}
 
 		/**
@@ -743,10 +712,7 @@
 				$this->Email = $wpdb->get_var( $wpdb->prepare( "SELECT user_email FROM $wpdb->users WHERE ID = %d LIMIT 1", $this->user_id ) );
 
 				$this->subtotal = $dbobj->subtotal;
-				$this->tax = $dbobj->tax;
-				$this->couponamount = $dbobj->couponamount;
-				$this->certificate_id = $dbobj->certificate_id;
-				$this->certificateamount = $dbobj->certificateamount;
+				$this->tax = (float)$dbobj->tax;
 				$this->total = $dbobj->total;
 				$this->payment_type = $dbobj->payment_type;
 				$this->cardtype = $dbobj->cardtype;
@@ -1322,35 +1288,11 @@
 		{
 			global $current_user, $wpdb, $pmpro_checkout_id;
 
+			// Perform calculations before each order save.
 			//get a random code to use for the public ID
 			if(empty($this->code))
 				$this->code = $this->getRandomCode();
 
-			//figure out how much we charged
-			if(!empty($this->InitialPayment))
-				$amount = $this->InitialPayment;
-			elseif(!empty($this->subtotal))
-				$amount = $this->subtotal;
-			else
-				$amount = 0;
-
-			//Todo: Tax?!, Coupons, Certificates, affiliates
-			if(empty($this->subtotal))
-				$this->subtotal = $amount;
-			if(isset($this->tax))
-				$tax = $this->tax;
-			else
-				$tax = $this->getTax(true);
-			$this->certificate_id = "";
-			$this->certificateamount = "";
-
-			//calculate total
-			if ( ! empty( $this->total ) ) {
-				$total = $this->total;
-			} else {
-				$total = (float)$amount + (float)$tax;
-				$this->total = $total;
-			}
 			
 			//these fix some warnings/notices
 			if(empty($this->billing))
@@ -1358,42 +1300,13 @@
 				$this->billing = new stdClass();
 				$this->billing->name = $this->billing->street = $this->billing->city = $this->billing->state = $this->billing->zip = $this->billing->country = $this->billing->phone = "";
 			}
-			if(empty($this->user_id))
-				$this->user_id = 0;
-			if(empty($this->paypal_token))
-				$this->paypal_token = "";
-			if(empty($this->couponamount))
-				$this->couponamount = "";
-			if(empty($this->payment_type))
-				$this->payment_type = "";
-			if(empty($this->payment_transaction_id))
-				$this->payment_transaction_id = "";
-			if(empty($this->subscription_transaction_id))
-				$this->subscription_transaction_id = "";
-			if(empty($this->affiliate_id))
-				$this->affiliate_id = "";
-			if(empty($this->affiliate_subid))
-				$this->affiliate_subid = "";
-			if(empty($this->session_id))
-				$this->session_id = "";
-			if(empty($this->accountnumber))
-				$this->accountnumber = "";
-			if(empty($this->cardtype))
-				$this->cardtype = "";
-			if(empty($this->expirationmonth))
-				$this->expirationmonth = "";
-			if(empty($this->expirationyear))
-				$this->expirationyear = "";
-			if(empty($this->ExpirationDate))
-				$this->ExpirationDate = "";
-			if (empty($this->status))
-				$this->status = "";
 
 			if(empty($this->gateway))
 				$this->gateway = get_option("pmpro_gateway");
 			if(empty($this->gateway_environment))
 				$this->gateway_environment = get_option("pmpro_gateway_environment");
 			
+			// Calculate datetime/timestamp. Datetime is what actually gets saved.
 			if( empty( $this->datetime ) && empty( $this->timestamp ) ) {
 				$this->timestamp = time();
 				$this->datetime = date("Y-m-d H:i:s", $this->timestamp);				
@@ -1404,9 +1317,7 @@
 				$this->timestamp = strtotime( $this->datetime );	//fixing the timestamp
 			}				
 
-			if(empty($this->notes))
-				$this->notes = "";
-
+			// Calculate checkout_id if necessary.
 			if(empty($this->checkout_id) || intval($this->checkout_id)<1) {
 				$highestval = $wpdb->get_var("SELECT MAX(checkout_id) FROM $wpdb->pmpro_membership_orders");
 				$this->checkout_id = intval($highestval)+1;
@@ -1435,9 +1346,6 @@
 									`billing_phone` = '" . esc_sql($this->billing->phone) . "',
 									`subtotal` = '" . esc_sql( $this->subtotal ) . "',
 									`tax` = '" . esc_sql( $this->tax ) . "',
-									`couponamount` = '" . esc_sql( $this->couponamount ) . "',
-									`certificate_id` = " . intval($this->certificate_id) . ",
-									`certificateamount` = '" . esc_sql( $this->certificateamount ) . "',
 									`total` = '" . esc_sql( $this->total ) . "',
 									`payment_type` = '" . esc_sql( $this->payment_type ) . "',
 									`cardtype` = '" . esc_sql( $this->cardtype ) . "',
@@ -1462,6 +1370,21 @@
 				//set up actions
 				$before_action = "pmpro_add_order";
 				$after_action = "pmpro_added_order";
+
+				// Perform calculations before a new order is added.
+				// Figure out how much we charged.
+				$amount = ! empty( $this->InitialPayment ) ? (float)$this->InitialPayment : (float)$this->subtotal;
+
+				// Fill subtotal if necessary.
+				if ( empty( $this->subtotal ) ) {
+					$this->subtotal = $amount;
+				}
+
+				// Calculate tax if necessary.
+				$this->tax = empty( $this->tax ) ? $this->getTax(true) : $this->tax;
+
+				// Calculate total.
+				$this->total = empty( $this->total ) ? (float)$amount + (float)$this->tax : $this->total;
 				
 				//only on inserts, we might want to set the expirationmonth and expirationyear from ExpirationDate
 				if( (empty($this->expirationmonth) || empty($this->expirationyear)) && !empty($this->ExpirationDate)) {
@@ -1471,7 +1394,7 @@
 				
 				//insert
 				$this->sqlQuery = "INSERT INTO $wpdb->pmpro_membership_orders
-								(`code`, `session_id`, `user_id`, `membership_id`, `paypal_token`, `billing_name`, `billing_street`, `billing_city`, `billing_state`, `billing_zip`, `billing_country`, `billing_phone`, `subtotal`, `tax`, `couponamount`, `certificate_id`, `certificateamount`, `total`, `payment_type`, `cardtype`, `accountnumber`, `expirationmonth`, `expirationyear`, `status`, `gateway`, `gateway_environment`, `payment_transaction_id`, `subscription_transaction_id`, `timestamp`, `affiliate_id`, `affiliate_subid`, `notes`, `checkout_id`)
+								(`code`, `session_id`, `user_id`, `membership_id`, `paypal_token`, `billing_name`, `billing_street`, `billing_city`, `billing_state`, `billing_zip`, `billing_country`, `billing_phone`, `subtotal`, `tax`, `total`, `payment_type`, `cardtype`, `accountnumber`, `expirationmonth`, `expirationyear`, `status`, `gateway`, `gateway_environment`, `payment_transaction_id`, `subscription_transaction_id`, `timestamp`, `affiliate_id`, `affiliate_subid`, `notes`, `checkout_id`)
 								VALUES('" . esc_sql( $this->code ) . "',
 									   '" . esc_sql( session_id() ) . "',
 									   " . intval($this->user_id) . ",
@@ -1485,11 +1408,8 @@
 									   '" . esc_sql($this->billing->country) . "',
 									   '" . esc_sql( cleanPhone($this->billing->phone) ) . "',
 									   '" . esc_sql( $this->subtotal ) . "',
-									   '" . esc_sql( $tax ) . "',
-									   '" . esc_sql( $this->couponamount ). "',
-									   " . intval($this->certificate_id) . ",
-									   '" . esc_sql( $this->certificateamount ) . "',
-									   '" . esc_sql( $total ) . "',
+									   '" . esc_sql( $this->tax ) . "',
+									   '" . esc_sql( $this->total ) . "',
 									   '" . esc_sql( $this->payment_type ) . "',
 									   '" . esc_sql( $this->cardtype ) . "',
 									   '" . esc_sql( hideCardNumber($this->accountnumber, false) ) . "',
@@ -1575,12 +1495,12 @@
 		/**
 		 * Update the status of the order in the database.
 		 */
-		function updateStatus($newstatus)
-		{
+		function updateStatus( $newstatus ) {
 			global $wpdb;
 
-			if(empty($this->id))
+			if( empty( $this->id ) ) {
 				return false;
+			}				
 
 			$this->sqlQuery = $wpdb->prepare( "UPDATE $wpdb->pmpro_membership_orders SET status = %s WHERE id = %d LIMIT 1", $newstatus, $this->id );
 			
@@ -1618,15 +1538,12 @@
 		}
 
 		/**
-		 * Cancel an order and call the cancel step of the gateway class if needed.
+		 * Call the cancel step of the order's subscription if needed.
 		 */
-		function cancel() {
-			global $wpdb;
-			
-			//only need to cancel on the gateway if there is a subscription id
-			if(empty($this->subscription_transaction_id)) {
-				//just mark as cancelled
-				$this->updateStatus("cancelled");
+		function cancel() {			
+			// Only need to cancel on the gateway if there is a subscription.
+			$subscription = $this->get_subscription();
+			if ( empty( $subscription ) ) {
 				return true;
 			} else {
 				//get some data
@@ -1686,10 +1603,6 @@
 					$sqlQuery = $wpdb->prepare( "UPDATE $wpdb->pmpro_memberships_users SET initial_payment = 0, billing_amount = 0, cycle_number = 0 WHERE user_id = %d AND membership_id = %d AND status = 'active'", $this->user_id, $this->membership_id );
 					$wpdb->query($sqlQuery);
 				}
-				
-				
-				
-				return $result;
 			}
 		}
 
@@ -1740,70 +1653,6 @@
 			}
 
 			return false;
-		}
-
-		/**
-		 * Get the PMPro_Subscription object for this order.
-		 * If the subscription doesn't exist, it will be created.
-		 *
-		 * @return PMPro_Subscription|null The subscription object or null if the order is not a subscription.
-		 */
-		public function get_subscription() {
-			// Make sure that this order is a part of a subscription.
-			if ( empty( $this->subscription_transaction_id ) || empty( $this->gateway ) || empty( $this->gateway_environment ) ) {
-				// We don't have all the info needed for a subscription. Bail.
-				return null;
-			}
-
-			$get_subscription_args = array(
-				'subscription_transaction_id' => $this->subscription_transaction_id,
-				'gateway'                     => $this->gateway,
-				'gateway_environment'  	      => $this->gateway_environment,
-			);
-			$existing_subscription = PMPro_Subscription::get_subscription( $get_subscription_args );
-			if ( ! empty( $existing_subscription ) ) {
-				// We already have a subscription for this order, return it.
-				return $existing_subscription;
-			}
-
-			// Only create a subscription if this order is complete.
-			if ( 'success' !== $this->status ) {
-				// The order is not complete, so it isn't a valid subscription payment.
-				return null;
-			}
-
-			if ( pmpro_is_checkout() ) {
-				// We are processing a checkout. Get the level from the checkout.
-				$subscription_level = $this->getMembershipLevelAtCheckout();
-			} else {
-				// Not at checkout. Get the level from the database.
-				$subscription_level = $this->getMembershipLevel();
-			}
-
-			if ( empty( $subscription_level ) ) {
-				// We couldn't get level information, so we shouldn't create a subscription.
-				return null;
-			}
-
-			$create_subscription_args = array(
-				'user_id'                     => $this->user_id,
-				'membership_level_id'  		  => $this->membership_id,
-				'gateway'                     => $this->gateway,
-				'gateway_environment'  	      => $this->gateway_environment,
-				'subscription_transaction_id' => $this->subscription_transaction_id,
-				'status'                      => 'active',
-				'billing_amount'              => empty( $subscription_level->billing_amount ) ? 0.00 : $subscription_level->billing_amount,
-				'cycle_number'                => empty( $subscription_level->cycle_number ) ? 0 : $subscription_level->cycle_number,
-				'cycle_period'                => empty( $subscription_level->cycle_period ) ? 'Month' : $subscription_level->cycle_period,
-				'billing_limit'               => empty( $subscription_level->billing_limit ) ? 0 : $subscription_level->billing_limit,
-				'trial_amount'                => empty( $subscription_level->trial_amount ) ? 0.00 : $subscription_level->trial_amount,
-				'trial_limit'                 => empty( $subscription_level->trial_limit ) ? 0 : $subscription_level->trial_limit,
-				'startdate'                   => date_i18n( 'Y-m-d H:i:s', $this->timestamp ),
-				'next_payment_date'           => empty( $this->ProfileStartDate ) ? date_i18n( 'Y-m-d H:i:s', strtotime( '+ ' . $subscription_level->cycle_number . ' ' . $subscription_level->cycle_period, (int)$this->timestamp ) ) : $this->ProfileStartDate,
-			);
-
-			$new_subscription = PMPro_Subscription::create( $create_subscription_args );
-			return ! empty( $new_subscription ) ? $new_subscription : null;
 		}
 
 		/**
@@ -1918,7 +1767,71 @@
 
 			return apply_filters( 'pmpro_test_order_data', $this );
 		}
-		
+
+		/**
+		 * Get the PMPro_Subscription object for this order.
+		 * If the subscription doesn't exist, it will be created.
+		 *
+		 * @return PMPro_Subscription|null The subscription object or null if the order is not a subscription.
+		 */
+		public function get_subscription() {
+			// Make sure that this order is a part of a subscription.
+			if ( empty( $this->subscription_transaction_id ) || empty( $this->gateway ) || empty( $this->gateway_environment ) ) {
+				// We don't have all the info needed for a subscription. Bail.
+				return null;
+			}
+
+			$get_subscription_args = array(
+				'subscription_transaction_id' => $this->subscription_transaction_id,
+				'gateway'                     => $this->gateway,
+				'gateway_environment'  	      => $this->gateway_environment,
+			);
+			$existing_subscription = PMPro_Subscription::get_subscription( $get_subscription_args );
+			if ( ! empty( $existing_subscription ) ) {
+				// We already have a subscription for this order, return it.
+				return $existing_subscription;
+			}
+
+			// Only create a subscription if this order is complete.
+			if ( 'success' !== $this->status ) {
+				// The order is not complete, so it isn't a valid subscription payment.
+				return null;
+			}
+
+			if ( pmpro_is_checkout() ) {
+				// We are processing a checkout. Get the level from the checkout.
+				$subscription_level = $this->getMembershipLevelAtCheckout();
+			} else {
+				// Not at checkout. Get the level from the database.
+				$subscription_level = $this->getMembershipLevel();
+			}
+
+			if ( empty( $subscription_level ) ) {
+				// We couldn't get level information, so we shouldn't create a subscription.
+				return null;
+			}
+
+			$create_subscription_args = array(
+				'user_id'                     => $this->user_id,
+				'membership_level_id'  		  => $this->membership_id,
+				'gateway'                     => $this->gateway,
+				'gateway_environment'  	      => $this->gateway_environment,
+				'subscription_transaction_id' => $this->subscription_transaction_id,
+				'status'                      => 'active',
+				'billing_amount'              => empty( $subscription_level->billing_amount ) ? 0.00 : $subscription_level->billing_amount,
+				'cycle_number'                => empty( $subscription_level->cycle_number ) ? 0 : $subscription_level->cycle_number,
+				'cycle_period'                => empty( $subscription_level->cycle_period ) ? 'Month' : $subscription_level->cycle_period,
+				'billing_limit'               => empty( $subscription_level->billing_limit ) ? 0 : $subscription_level->billing_limit,
+				'trial_amount'                => empty( $subscription_level->trial_amount ) ? 0.00 : $subscription_level->trial_amount,
+				'trial_limit'                 => empty( $subscription_level->trial_limit ) ? 0 : $subscription_level->trial_limit,
+				'startdate'                   => date_i18n( 'Y-m-d H:i:s', $this->timestamp ),
+				'next_payment_date'           => empty( $this->ProfileStartDate ) ? date_i18n( 'Y-m-d H:i:s', strtotime( '+ ' . $subscription_level->cycle_number . ' ' . $subscription_level->cycle_period, (int)$this->timestamp ) ) : $this->ProfileStartDate,
+			);
+
+			$new_subscription = PMPro_Subscription::create( $create_subscription_args );
+			return ! empty( $new_subscription ) ? $new_subscription : null;
+		}
+
 		/**
 		 * Does this order have any billing address fields set?
 		 * @since 2.8
