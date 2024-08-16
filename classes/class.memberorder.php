@@ -474,7 +474,10 @@
 
 			global $wpdb;
 
-			$sql_query = "SELECT `id` FROM `$wpdb->pmpro_membership_orders`";
+			// Check if we are going to return the count of orders.
+			$return_count = isset( $args['return_count'] ) ? (bool) $args['return_count'] : false;
+
+			$sql_query = $return_count ? "SELECT COUNT(*) FROM `$wpdb->pmpro_membership_orders` `o`" : "SELECT `o`.`id` FROM `$wpdb->pmpro_membership_orders` `o`";
 
 			$prepared = array();
 			$where    = array();
@@ -607,11 +610,25 @@
 					$prepared = array_merge( $prepared, $args['discount_code_id'] );
 				}
       }
+
+			// Filter by date range by start date. (YYYY-MM-DD HH:MM:SS UTC)
+			if ( isset( $args['start_date'] ) ) {
+				$where[]    = '`o`.`timestamp` >= %s';
+				$prepared[] = $args['start_date'];
+			}
+
+			// Filter by date range by end date. (YYYY-MM-DD HH:MM:SS UTC)
+			if ( isset( $args['end_date'] ) ) {
+				$where[]    = '`o`.`timestamp` <= %s';
+				$prepared[] = $args['end_date'];
+			}
+
 			// Maybe filter the data.
 			if ( $where ) {
 				$sql_query .= ' WHERE ' . implode( ' AND ', $where );
 			}
 
+			if ( ! $return_count ) {
 			// Handle the order of data.
 			$sql_query .= ' ORDER BY ' . $orderby;
 
@@ -620,12 +637,19 @@
 				$sql_query .= ' LIMIT %d';
 				$prepared[] = $limit;
 			}
+			}
 
 			// Maybe prepare the query.
 			if ( $prepared ) {
 				$sql_query = $wpdb->prepare( $sql_query, $prepared );
 			}
 
+			// If we're returning a count, return the count.
+			if ( $return_count ) {
+				return (int) $wpdb->get_var( $sql_query );
+			}
+
+			// Not returning a count, so get the order IDs.
 			$member_order_ids = $wpdb->get_col( $sql_query );
 
 			if ( empty( $member_order_ids ) ) {
