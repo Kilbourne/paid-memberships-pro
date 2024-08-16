@@ -3617,12 +3617,12 @@ class PMProGateway_stripe extends PMProGateway {
 	/**
 	 * Get the Stripe secret key based on gateway environment.
 	 *
-	 * @deprecated 2.7.0. Only deprecated for public use, will be changed to private non-static in a future version.
+	 * @since 2.7 Deprecated for public use.
+	 * @since 3.0 Updated to private non-static.
 	 *
-	 * @return The Stripe secret key.
+	 * @return string The Stripe secret key.
 	 */
-	public static function get_secretkey() {
-		pmpro_method_should_be_private( '2.7.0' );
+	private function get_secretkey() {
 		$secretkey = '';
 		if ( self::using_legacy_keys() ) {
 			$secretkey = get_option( 'pmpro_stripe_secretkey' );
@@ -3637,12 +3637,12 @@ class PMProGateway_stripe extends PMProGateway {
 	/**
 	 * Get the Stripe publishable key based on gateway environment.
 	 *
-	 * @deprecated 2.7.0. Only deprecated for public use, will be changed to private non-static in a future version.
+	 * @since 2.7 Deprecated for public use.
+	 * @since 3.0 Updated to private non-static.
 	 *
-	 * @return The Stripe publishable key.
+	 * @return string The Stripe publishable key.
 	 */
-	public static function get_publishablekey() {
-		pmpro_method_should_be_private( '2.7.0' );
+	private function get_publishablekey() {
 		$publishablekey = '';
 		if ( self::using_legacy_keys() ) {
 			$publishablekey = get_option( 'pmpro_stripe_publishablekey' );
