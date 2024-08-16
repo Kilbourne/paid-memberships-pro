@@ -1526,15 +1526,20 @@
 				return false;
 			}				
 
-			$this->sqlQuery = $wpdb->prepare( "UPDATE $wpdb->pmpro_membership_orders SET status = %s WHERE id = %d LIMIT 1", $newstatus, $this->id );
+			if ( 'cancelled' === $newstatus ) {
+				// Only cancel subscription, not order.
+				return $this->cancel();
+			}
+
+			$this->status = $newstatus;
+			$this->sqlQuery = $wpdb->prepare( "UPDATE $wpdb->pmpro_membership_orders SET status = %s WHERE id = %d LIMIT 1", $newstatus, $this->id );			
 			
-			do_action('pmpro_update_order', $this);
-			if($wpdb->query($this->sqlQuery) !== false){
-				$this->status = $newstatus;
+			do_action( 'pmpro_update_order', $this );
+			if ( $wpdb->query( $this->sqlQuery ) !== false ) {
 				do_action('pmpro_updated_order', $this);
 				
 				return true;
-			}else{
+			} else {
 				return false;
 			}
 		}
