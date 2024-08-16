@@ -237,8 +237,43 @@ function pmpro_admin_bar_menu() {
 			array(
 				'id' => 'pmpro-license',
 				'parent' => 'paid-memberships-pro',
-				'title' => __( '<span style="color: ' . $span_color . '; line-height: 26px;">License</span>', 'paid-memberships-pro' ),
+				'title' => '<span style="color: ' . $span_color . '; line-height: 26px;">' . __( 'License', 'paid-memberships-pro' ) . '</span>',
 				'href' => admin_url( 'admin.php?page=pmpro-license' )
+			)
+		);
+	}
+
+	// Add menu item for adding a new member.
+	if ( current_user_can( 'manage_options' ) ) {
+		$wp_admin_bar->add_menu(
+			array(
+				'id' => 'pmpro-new-member',
+				'parent' => 'new-content',
+				'title' => __( 'Member', 'paid-memberships-pro' ),
+				'href' => add_query_arg(
+					array(
+						'page' => 'pmpro-member',
+					),
+					admin_url( 'admin.php' )
+				)
+			)
+		);
+	}
+
+	// Add a menu item for editing the current user's member information.
+	if ( current_user_can( 'manage_options' ) ) {
+		$wp_admin_bar->add_menu(
+			array(
+				'id' => 'pmpro-edit-member',
+				'parent' => 'user-actions',
+				'title' => __( 'Edit Member', 'paid-memberships-pro' ),
+				'href' => add_query_arg(
+					array(
+						'page' => 'pmpro-member',
+						'user_id' => get_current_user_id(),
+					),
+					admin_url( 'admin.php' )
+				)
 			)
 		);
 	}
@@ -317,6 +352,10 @@ function pmpro_addons() {
 
 function pmpro_orders() {
 	require_once( PMPRO_DIR . '/adminpages/orders.php' );
+}
+
+function pmpro_subscriptions() {
+	require_once( PMPRO_DIR . '/adminpages/subscriptions.php' );
 }
 
 function pmpro_license_settings_page() {
