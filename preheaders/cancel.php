@@ -2,7 +2,7 @@
 	global $besecure;
 	$besecure = false;
 
-	global $wpdb, $current_user, $pmpro_msg, $pmpro_msgt, $pmpro_confirm, $pmpro_error;
+	global $current_user, $pmpro_msg, $pmpro_msgt, $pmpro_error;
 
 	// Get the level IDs they are requesting to cancel using the old ?level param.
 	if ( ! empty( $_REQUEST['level'] ) && empty( $_REQUEST['levelstocancel'] ) ) {
