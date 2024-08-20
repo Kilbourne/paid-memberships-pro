@@ -31,12 +31,12 @@
 		exit;
 	}
 
-		// If user has no membership level, redirect to levels page.
+	// If user has no membership level, redirect to levels page.
 	$user_levels = pmpro_getMembershipLevelsForUser( $current_user->ID );
 	if ( empty( $user_levels ) ) {
-			wp_redirect( pmpro_url( 'levels' ) );
-			exit;
-		}
+		wp_redirect( pmpro_url( 'levels' ) );
+		exit;
+	}
 
 	//check if a level was passed in to cancel specifically
 	if ( ! empty ( $requested_ids ) && $requested_ids != 'all' ) {		
@@ -69,9 +69,34 @@
 		 */
 		$process_cancellation = apply_filters( 'pmpro_cancel_should_process', true, $current_user );
 		if ( $process_cancellation ) {
+			if ( empty( $old_level_ids ) ) {
+				$old_level_ids = wp_list_pluck( $user_levels, 'ID' );
+			}
 
 			$worked = true;
 			foreach($old_level_ids as $old_level_id) {
+				// If the user does have a subscription for this level (possibly multiple), get the furthest next payment date that is after today.
+				$subscriptions = PMPro_Subscription::get_subscriptions_for_user( $current_user->ID, (int)$old_level_id );
+				$next_payment_date = false;
+				if ( ! empty( $subscriptions ) ) {
+					foreach ( $subscriptions as $sub ) {
+						$sub_next_payment_date = $sub->get_next_payment_date();
+						if ( ! empty( $sub_next_payment_date ) && $sub_next_payment_date > current_time( 'timestamp' ) && ( empty( $next_payment_date ) || $sub_next_payment_date > $next_payment_date ) ) {
+							$next_payment_date = $sub_next_payment_date;
+						}
+					}
+				}
+
+				// If we have a next payment date, we only want to set the enddate for the membership to the next payment date and cancel the subscription.
+				// Also add a filter in case a site wants to disable "cancel on next payment date" and cancel immediately.
+				if ( ! empty( $next_payment_date ) && apply_filters( 'pmpro_cancel_on_next_payment_date', true, $old_level_id, $current_user->ID ) ) {
+					// Set the enddate to the next payment date.
+					pmpro_set_expiration_date( $current_user->ID, $old_level_id, $next_payment_date );
+
+					// Cancel the subscriptions.
+					foreach ( $subscriptions as $sub ) {
+						$sub->cancel_at_gateway();
+					}
 
 					// Send an email to the member.
 					$myemail = new PMProEmail();
@@ -80,6 +105,21 @@
 					// Send an email to the admin.
 					$myemail = new PMProEmail();
 					$myemail->sendCancelOnNextPaymentDateAdminEmail( $current_user, $old_level_id );
+				} else {
+					if ( pmpro_cancelMembershipLevel($old_level_id, $current_user->ID, 'cancelled') ) {
+						// Send an email to the member.
+						$myemail = new PMProEmail();
+						$myemail->sendCancelEmail( $current_user, $old_level_id );
+
+						// Send an email to the admin.
+						$myemail = new PMProEmail();
+						$myemail->sendCancelAdminEmail( $current_user, $old_level_id );
+					} else {
+						$worked = false;
+					}
+				}
+			}
+		}
         
 		if ( ! empty( $worked ) ) {
 			if ( count( $old_level_ids ) > 1 ) {
