@@ -54,6 +54,10 @@
 
 	// Are we confirming a cancellation?
 	if ( ! empty( $_REQUEST['confirm'] ) ) {
+		// Check the nonce.
+		if ( ! wp_verify_nonce( $_REQUEST['pmpro_cancel-nonce'], 'pmpro_cancel-nonce' ) ) {
+			wp_die( esc_html__( 'Error: Invalid nonce.', 'paid-memberships-pro' ) );
+		}
 
 		/**
 		 * Check whether a cancellation should be able to process.
