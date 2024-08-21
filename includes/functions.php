@@ -4446,6 +4446,36 @@ function pmpro_sanitize_period( $period ) {
  * @param int $level_id The ID of the level to update.
  * @param int|string $enddate The date to set the enddate to.
  */
+function pmpro_set_expiration_date( $user_id, $level_id, $enddate ) {
+	global $wpdb;
+
+	if ( is_numeric( $enddate ) ) {
+		$enddate = date( 'Y-m-d H:i:s', $enddate );
+	}
+
+	$wpdb->update(
+		$wpdb->pmpro_memberships_users,
+		[
+			'enddate' => $enddate,
+		],
+		[
+			'status'        => 'active',
+			'membership_id' => $level_id,
+			'user_id'       => $user_id,
+		],
+		[
+			'%s',
+		],
+		[
+			'%s',
+			'%d',
+			'%d',
+		]
+	);
+
+	// Clear the level cache for this user.
+	pmpro_clear_level_cache_for_user( $user_id );
+}
 
 /*
  * Check whether a file should be allowed to be uploaded.
