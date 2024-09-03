@@ -220,8 +220,8 @@ if ( isset( $_REQUEST['CVV'] ) ) {
 	$CVV = "";
 }
 
-if ( isset( $_REQUEST['discount_code'] ) ) {
-	$discount_code = preg_replace( "/[^A-Za-z0-9\-]/", "", sanitize_text_field( $_REQUEST['discount_code'] ) );
+if ( ! empty( $pmpro_level->discount_code ) ) {
+	$discount_code = preg_replace( "/[^A-Za-z0-9\-]/", "", sanitize_text_field( $pmpro_level->discount_code ) );
 } else {
 	$discount_code = "";
 }
@@ -293,6 +293,16 @@ $pmpro_confirmed = false;
 
 //check their fields if they clicked continue
 if ( $submit && $pmpro_msgt != "pmpro_error" ) {
+	// Check the nonce.
+	if ( empty( $_REQUEST['pmpro_checkout_nonce'] ) || ! wp_verify_nonce( sanitize_key( $_REQUEST['pmpro_checkout_nonce'] ), 'pmpro_checkout_nonce' ) ) {
+		// Nonce is not valid, but a nonce was only added in the 3.0 checkout template. We only want to show an error if the checkout template is 3.0 or later.
+		$loaded_path = pmpro_get_template_path_to_load( 'checkout' );
+		$loaded_version = pmpro_get_version_for_page_template_at_path( $loaded_path );
+		if ( ! empty( $loaded_version ) && version_compare( $loaded_version, '3.0', '>=' ) ) {
+			// Nonce is not valid. Show an error.
+			pmpro_setMessage( __( "Nonce security check failed.", 'paid-memberships-pro' ), 'pmpro_error' );
+		}
+	}
 
 	//make sure javascript is ok
 	if ( apply_filters( "pmpro_require_javascript_for_checkout", true ) && ! empty( $_REQUEST['checkjavascript'] ) && empty( $_REQUEST['javascriptok'] ) ) {
@@ -679,19 +689,9 @@ if ( ! empty( $pmpro_confirmed ) ) {
 				do_action( 'pmpro_discount_code_used', $discount_code_id, $user_id, $code_order_id );
 			}
 
-			//save billing info ect, as user meta
-			$meta_keys   = array(
-				"pmpro_CardType",
-				"pmpro_AccountNumber",
-				"pmpro_ExpirationMonth",
-				"pmpro_ExpirationYear",
-			);
-			$meta_values = array(
-				$CardType,
-				hideCardNumber( $AccountNumber ),
-				$ExpirationMonth,
-				$ExpirationYear,
-			);
+			//save billing info etc, as user meta
+			$meta_keys   = array();
+			$meta_values = array();
 
 			// Check if firstname and last name fields are set.
 			if ( ! empty( $bfirstname ) || ! empty( $blastname ) ) {
@@ -779,7 +779,7 @@ if ( ! empty( $pmpro_confirmed ) ) {
 			}
 
 			//redirect to confirmation
-			$rurl = pmpro_url( "confirmation", "?level=" . $pmpro_level->id );
+			$rurl = pmpro_url( "confirmation", "?pmpro_level=" . $pmpro_level->id );
 			$rurl = apply_filters( "pmpro_confirmation_url", $rurl, $user_id, $pmpro_level );
 			wp_redirect( $rurl );
 			exit;
@@ -825,17 +825,11 @@ if ( empty( $submit ) ) {
 		$bphone        = get_user_meta( $current_user->ID, "pmpro_bphone", true );
 		$bemail        = get_user_meta( $current_user->ID, "pmpro_bemail", true );
 		$bconfirmemail = $bemail;    //as of 1.7.5, just setting to bemail
-		$CardType      = get_user_meta( $current_user->ID, "pmpro_CardType", true );
-		//$AccountNumber = hideCardNumber(get_user_meta($current_user->ID, "pmpro_AccountNumber", true), false);
-		$ExpirationMonth = get_user_meta( $current_user->ID, "pmpro_ExpirationMonth", true );
-		$ExpirationYear  = get_user_meta( $current_user->ID, "pmpro_ExpirationYear", true );
 	}
 }
 
-//clear out XXXX numbers (e.g. with Stripe)
-if ( ! empty( $AccountNumber ) && strpos( $AccountNumber, "XXXX" ) === 0 ) {
-	$AccountNumber = "";
-}
+// Preventing conflicts with old checkout templates that depend on the $pmpro_level global being set.
+pmpro_getAllLevels();
 
 /**
  * Hook to run actions after the checkout preheader is loaded.

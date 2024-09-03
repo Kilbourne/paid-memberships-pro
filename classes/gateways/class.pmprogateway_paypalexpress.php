@@ -97,6 +97,26 @@
 		}
 
 		/**
+		 * Check whether or not a gateway supports a specific feature.
+		 * 
+		 * @since 3.0
+		 * 
+		 * @return string|boolean $supports Returns whether or not the gateway supports the requested feature.
+		 */
+		public static function supports( $feature ) {
+			$supports = array(
+				'subscription_sync' => true,
+				'payment_method_updates' => false,
+			);
+
+			if ( empty( $supports[$feature] ) ) {
+				return false;
+			}
+
+			return $supports[$feature];
+		}
+
+		/**
 		 * Get a list of payment options that the this gateway needs/supports.
 		 *
 		 * @since 1.8
@@ -155,17 +175,17 @@
 			<td colspan="2" style="padding: 0px;">
 				<div class="notice error inline">
 					<p>
-				<?php
-					$allowed_message_html = array (
-						'a' => array (
-							'href' => array(),
-							'target' => array(),
-							'title' => array(),
-						),
-					);
-					echo sprintf( wp_kses( __( 'Note: We do not recommend using PayPal Standard. We suggest using PayPal Express, Website Payments Pro (Legacy), or PayPal Pro (Payflow Pro). <a target="_blank" href="%s" title="More information on why can be found here">More information on why can be found here</a>.', 'paid-memberships-pro' ), $allowed_message_html ), 'https://www.paidmembershipspro.com/read-using-paypal-standard-paid-memberships-pro/?utm_source=plugin&utm_medium=pmpro-paymentsettings&utm_campaign=blog&utm_content=read-using-paypal-standard-paid-memberships-pro' );
-				?>
-				</p>
+					<?php
+						$allowed_message_html = array (
+							'a' => array (
+								'href' => array(),
+								'target' => array(),
+								'title' => array(),
+							),
+						);
+						echo sprintf( wp_kses( __( 'Note: We do not recommend using PayPal Standard. We suggest using PayPal Express, Website Payments Pro (Legacy), or PayPal Pro (Payflow Pro). <a target="_blank" href="%s" title="More information on why can be found here">More information on why can be found here</a>.', 'paid-memberships-pro' ), $allowed_message_html ), 'https://www.paidmembershipspro.com/read-using-paypal-standard-paid-memberships-pro/?utm_source=plugin&utm_medium=pmpro-paymentsettings&utm_campaign=blog&utm_content=read-using-paypal-standard-paid-memberships-pro' );
+					?>
+					</p>
 				</div>
 			</td>
 		</tr>
@@ -881,6 +901,19 @@
 			}
 		}
 
+		/**
+		 * Cancels a subscription in PayPal.
+		 *
+		 * @param PMPro_Subscription $subscription to cancel.
+	 	 */
+		function cancel_subscription( $subscription ) {
+			// Build the nvp string for PayPal API
+			$nvpStr = '&PROFILEID=' . urlencode( $subscription->get_subscription_transaction_id() ) . '&ACTION=Cancel&NOTE=' . urlencode('User requested cancel.');
+			$this->httpParsedResponseAr = $this->PPHttpPost('ManageRecurringPaymentsProfileStatus', $nvpStr);
+
+			return ( 'SUCCESS' == strtoupper( $this->httpParsedResponseAr['ACK'] ) || 'SUCCESSWITHWARNING' == strtoupper( $this->httpParsedResponseAr['ACK'] ) );
+		}
+
 		function getSubscriptionStatus(&$order)
 		{
 			if(empty($order->subscription_transaction_id))
@@ -908,6 +941,61 @@
 			}
 		}
 
+		/**
+		 * Pull subscription info from PayPal.
+		 *
+		 * @param PMPro_Subscription $subscription to pull data for.
+		 *
+		 * @return string|null Error message is returned if update fails.
+		 */
+		function update_subscription_info( $subscription ) {
+			$subscription_transaction_id = $subscription->get_subscription_transaction_id();
+			if ( empty( $subscription_transaction_id ) ) {
+				return 'Subscription transaction ID is empty.';
+			}
+
+			//paypal profile stuff
+			$nvpStr = "";
+			$nvpStr .= "&PROFILEID=" . urlencode( $subscription_transaction_id );
+			$response = $this->PPHttpPost('GetRecurringPaymentsProfileDetails', $nvpStr);
+
+			if("SUCCESS" == strtoupper($response["ACK"]) || "SUCCESSWITHWARNING" == strtoupper($response["ACK"])) {
+				// Found subscription.
+				$update_array = array();
+
+				// PayPal doesn't send the subscription start date, so let's take a guess based on the user's order history.
+				$oldest_orders = $subscription->get_orders( [
+					'limit'   => 1,
+					'orderby' => '`timestamp` ASC, `id` ASC',
+				] );
+
+				if ( ! empty( $oldest_orders ) ) {
+					$oldest_order = current( $oldest_orders );
+
+					$update_array['startdate'] = date_i18n( 'Y-m-d H:i:s', $oldest_order->getTimestamp( true ) );
+				}
+
+				if ( in_array( $response['STATUS'], array( 'Pending', 'Active' ), true ) ) {
+					// Subscription is active.
+					$update_array['status'] = 'active';
+					$update_array['next_payment_date'] = date( 'Y-m-d H:i:s', strtotime( $response['NEXTBILLINGDATE'] ) );
+					$update_array['billing_amount'] = floatval( $response['REGULARAMT'] );
+					$update_array['cycle_number'] = (int) $response['REGULARBILLINGFREQUENCY'];
+					$update_array['cycle_period'] = $response['REGULARBILLINGPERIOD'];
+					$update_array['trial_amount'] = empty( $response['TRIALAMT'] ) ? 0 : floatval( $response['TRIALAMT'] );
+					$update_array['trial_limit'] = empty( $response['TRIALTOTALBILLINGCYCLES'] ) ? 0 : (int) $response['TRIALTOTALBILLINGCYCLES'];
+					$update_array['billing_limit'] = empty( $response['REGULARTOTALBILLINGCYCLES'] ) ? 0 : (int) $response['REGULARTOTALBILLINGCYCLES'];
+				} else {
+					// Subscription is no longer active.
+					// Can't fill subscription end date, $request only has the date of the last payment.
+					$update_array['status'] = 'cancelled';
+				}
+				$subscription->set( $update_array );
+			} else {
+				return __( 'Subscription could not be found.', 'paid-memberships-pro' );
+			}
+		}
+		
 		function getTransactionStatus(&$order) {
 			$transaction_details = $order->Gateway->getTransactionDetailsByOrder( $order );
 			if( false === $transaction_details ){

@@ -363,6 +363,102 @@
 		}
 
 		/**
+		 * Semnd the "cancel on next payment date" email to the member.
+		 *
+		 * @param WP_User $user The WordPress user object.
+		 * @param int $level_id The level ID of the level that was cancelled.
+		 */
+		function sendCancelOnNextPaymentDateEmail( $user, $level_id ) {
+			// If an array is passed for $level_id, throw doing it wrong warning.
+			if ( is_array( $level_id ) ) {
+				_doing_it_wrong( __FUNCTION__, esc_html__( 'The $level_id parameter should be an integer, not an array.', 'paid-memberships-pro' ), '3.0' );
+			}
+
+			// Make sure that the user object is a WP_User object.
+			if ( ! is_a( $user, 'WP_User' ) ) {
+				_doing_it_wrong( __FUNCTION__, esc_html__( 'The $user parameter should be a WP_User object.', 'paid-memberships-pro' ), '3.0' );
+			}
+
+			// Get the level object.
+			$level = pmpro_getSpecificMembershipLevelForUser( $user->ID, $level_id );
+
+			// Make sure that the level is now set to expire.
+			if ( empty( $level ) || empty( $level->enddate) ) {
+				return false;
+			}
+
+			$this->email = $user->user_email;
+			$this->subject = sprintf( __( 'Your payment subscription at %s has been CANCELLED', 'paid-memberships-pro' ), $user->user_login, get_option( 'blogname' ) );
+
+			$this->data = array(
+				'user_login' => $user->user_login,
+				'user_email' => $user->user_email,
+				'display_name' => $user->display_name,
+				'sitename' => get_option( 'blogname' ),
+				'siteemail' => get_option( 'pmpro_from_email' ),
+				'login_link' => pmpro_login_url(),
+				'login_url' => pmpro_login_url(),
+				'levels_url' => pmpro_url( 'levels' ),
+				'membership_id' => $level->id,
+				'membership_level_name' => $level->name,
+				'startdate' => date_i18n( get_option( 'date_format' ), $level->startdate ),
+				'enddate' => date_i18n( get_option( 'date_format' ), $level->enddate ),
+			);
+
+			$this->template = apply_filters( "pmpro_email_template", "cancel_on_next_payment_date", $this );
+
+			return $this->sendEmail();
+		}
+
+		/**
+		 * Send the "cancel on next payment date" email to the admin.
+		 *
+		 * @param WP_User $user The WordPress user object.
+		 * @param int $level_id The level ID of the level that was cancelled.
+		 */
+		function sendCancelOnNextPaymentDateAdminEmail( $user, $level_id ) {
+			// If an array is passed for $level_id, throw doing it wrong warning.
+			if ( is_array( $level_id ) ) {
+				_doing_it_wrong( __FUNCTION__, esc_html__( 'The $level_id parameter should be an integer, not an array.', 'paid-memberships-pro' ), '3.0' );
+			}
+
+			// Make sure that the user object is a WP_User object.
+			if ( ! is_a( $user, 'WP_User' ) ) {
+				_doing_it_wrong( __FUNCTION__, esc_html__( 'The $user parameter should be a WP_User object.', 'paid-memberships-pro' ), '3.0' );
+			}
+
+			// Get the level object.
+			$level = pmpro_getSpecificMembershipLevelForUser( $user->ID, $level_id );
+
+			// Make sure that the level is now set to expire.
+			if ( empty( $level ) || empty( $level->enddate) ) {
+				return false;
+			}
+
+			$this->email = get_option( 'pmpro_from_email' );
+			$this->subject = sprintf( __( 'Payment subscription for %s at %s has been CANCELLED', 'paid-memberships-pro' ), $user->user_login, get_option( 'blogname' ) );
+
+			$this->data = array(
+				'user_login' => $user->user_login,
+				'user_email' => $user->user_email,
+				'display_name' => $user->display_name,
+				'sitename' => get_option( 'blogname' ),
+				'siteemail' => get_option( 'pmpro_from_email' ),
+				'login_link' => pmpro_login_url(),
+				'login_url' => pmpro_login_url(),
+				'levels_url' => pmpro_url( 'levels' ),
+				'membership_id' => $level->id,
+				'membership_level_name' => $level->name,
+				'startdate' => date_i18n( get_option( 'date_format' ), $level->startdate ),
+				'enddate' => date_i18n( get_option( 'date_format' ), $level->enddate ),
+			);
+
+			$this->template = apply_filters( "pmpro_email_template", "cancel_on_next_payment_date_admin", $this );
+
+			return $this->sendEmail();
+		}
+
+		/**
 		 * Send the refunded email to the member.
 		 *
 		 * @param object $user The WordPress user object.
@@ -1308,7 +1404,10 @@
 			);
 
 			// If the user no longer has a membership level, set the membership_change text to "Membership has been cancelled."
+			if ( ! pmpro_hasMembershipLevel( null, $user->ID ) ) {
+				$this->data['membership_change'] = __( 'Your membership has been cancelled.', 'paid-memberships-pro' );
 			} else {
+				$this->data['membership_change'] = __( 'You can view your current memberships by logging in and visiting your membership account page.', 'paid-memberships-pro' );
 			}
 
 			$this->template = apply_filters("pmpro_email_template", "admin_change", $this);
@@ -1348,7 +1447,10 @@
 			);
 
 			// If the user no longer has a membership level, set the membership_change text to "Membership has been cancelled."
+			if ( ! pmpro_hasMembershipLevel( null, $user->ID ) ) {
+				$this->data['membership_change'] = __( "The user's membership has been cancelled.", 'paid-memberships-pro' );
 			} else {
+				$this->data['membership_change'] = __( "You can view the user's current memberships from their Edit Member page.", 'paid-memberships-pro' );
 			}
 
 			$this->template = apply_filters("pmpro_email_template", "admin_change_admin", $this);
@@ -1405,6 +1507,8 @@
 				'invoice_id' => $order->id,
 				'invoice' => $invoice,
 				'levels_url' => pmpro_url( 'levels' ),
+				'membership_level_name' => $level->name,
+				'membership_level_id' => $order->membership_id
 			);
 
 			$this->template = apply_filters("pmpro_email_template", "billable_invoice", $this);

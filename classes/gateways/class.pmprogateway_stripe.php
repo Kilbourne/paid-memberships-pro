@@ -69,6 +69,26 @@ class PMProGateway_stripe extends PMProGateway {
 	 ************ STATIC METHODS ************
 	 ****************************************/
 	/**
+	 * Check whether or not a gateway supports a specific feature.
+	 * 
+	 * @since 3.0
+	 * 
+	 * @return bool|string
+	 */
+	public static function supports( $feature ) {
+		$supports = array(
+			'subscription_sync' => true,
+			'payment_method_updates' => 'individual'
+		);
+
+		if ( empty( $supports[$feature] ) ) {
+			return false;
+		}
+
+		return $supports[$feature];
+	}
+	
+	 /**
 	 * Load the Stripe API library.
 	 *
 	 * @since 1.8
@@ -1500,6 +1520,11 @@ class PMProGateway_stripe extends PMProGateway {
 			return;
 		}
 
+		// Only continue if the order's payment_transaction_id and subscription_transaction_id are empty, meaning that a payment hasn't been made yet.
+		if ( ! empty( $morder->payment_transaction_id ) || ! empty( $morder->subscription_transaction_id ) ) {
+			return;
+		}
+
 		$morder->user_id = $user_id;
 		$morder->status  = 'token';
 		$morder->saveOrder();
@@ -1547,6 +1572,9 @@ class PMProGateway_stripe extends PMProGateway {
 			$line_items[] = array(
 				'price'    => $initial_payment_price->id,
 				'quantity' => 1,
+			);
+			$payment_intent_data = array(
+				'description' => self::get_order_description( $morder ),
 			);
 			if ( ! empty( $application_fee_percentage ) ) {
 				$application_fee = floor( $initial_payment_price->unit_amount * $application_fee_percentage / 100 );
@@ -1669,6 +1697,13 @@ class PMProGateway_stripe extends PMProGateway {
 	 * @since 2.8
 	 */
 	public static function pmpro_billing_preheader_stripe_checkout() {
+		global $pmpro_billing_subscription;
+
+		// If the order being updated is not a Stripe order, bail.
+		if ( empty( $pmpro_billing_subscription ) || 'stripe' !== $pmpro_billing_subscription->get_gateway() ) {
+			return;
+		}
+
 		if ( 'portal' === get_option( 'pmpro_stripe_update_billing_flow' ) ) {
 			// Send user to Stripe Customer Portal.
 			$stripe = new PMProGateway_stripe();
@@ -1709,35 +1744,35 @@ class PMProGateway_stripe extends PMProGateway {
 			return;
 		}
 
-			// Get current user.
-			$user = wp_get_current_user();
-			if ( empty( $user->ID ) ) {
-				$error = __( 'User is not logged in.', 'paid-memberships-pro' );
-			}
-
-			if ( empty( $error ) ) {
-				// Get the Stripe Customer.
-				$stripe = new PMProGateway_stripe();
-				$customer = $stripe->get_customer_for_user( $user->ID );
-				if ( empty( $customer->id ) ) {
-					$error = __( 'Could not get Stripe customer for user.', 'paid-memberships-pro' );
-				}
-			}
-
-			if ( empty( $error ) ) {
-				// Send the user to the customer portal.
-				$customer_portal_url = $stripe->get_customer_portal_url( $customer->id );
-				if ( ! empty( $customer_portal_url ) ) {
-					wp_redirect( $customer_portal_url );
-					exit;
-				}
-				$error = __( 'Could not get Customer Portal URL. This feature may not be set up in Stripe.', 'paid-memberships-pro' );
-			}
-
-			// There must have been an error while getting the customer portal URL. Show an error and let user update
-			// their billing info onsite.
-			pmpro_setMessage( $error . ' ' . __( 'Please contact the site administrator.', 'paid-memberships-pro' ), 'pmpro_alert', true );
+		// Get current user.
+		$user = wp_get_current_user();
+		if ( empty( $user->ID ) ) {
+			$error = __( 'User is not logged in.', 'paid-memberships-pro' );
 		}
+
+		if ( empty( $error ) ) {
+			// Get the Stripe Customer.
+			$stripe = new PMProGateway_stripe();
+			$customer = $stripe->get_customer_for_user( $user->ID );
+			if ( empty( $customer->id ) ) {
+				$error = __( 'Could not get Stripe customer for user.', 'paid-memberships-pro' );
+			}
+		}
+
+		if ( empty( $error ) ) {
+			// Send the user to the customer portal.
+			$customer_portal_url = $stripe->get_customer_portal_url( $customer->id );
+			if ( ! empty( $customer_portal_url ) ) {
+				wp_redirect( $customer_portal_url );
+				exit;
+			}
+			$error = __( 'Could not get Customer Portal URL. This feature may not be set up in Stripe.', 'paid-memberships-pro' );
+		}
+
+		// There must have been an error while getting the customer portal URL. Show an error and let user update
+		// their billing info onsite.
+		pmpro_setMessage( $error . ' ' . __( 'Please contact the site administrator.', 'paid-memberships-pro' ), 'pmpro_alert', true );
+	}
 
 	/****************************************
 	 ************ PUBLIC METHODS ************
@@ -1847,7 +1882,6 @@ class PMProGateway_stripe extends PMProGateway {
 		$order->payment_transaction_id = $payment_transaction_id;
 		$order->subscription_transaction_id = $subscription_transaction_id;
 		$order->status = 'success';
-		$order->saveOrder();
 		return true;
 	}
 
@@ -2132,6 +2166,60 @@ class PMProGateway_stripe extends PMProGateway {
 			$order->shorterror = $order->error;
 
 			return false;    //no customer found
+		}
+	}
+
+	/**
+	 * Pull subscription info from Stripe.
+	 *
+	 * @param PMPro_Subscription $subscription to pull data for.
+	 *
+	 * @return string|null Error message is returned if update fails.
+	 */
+	public function update_subscription_info( $subscription ) {
+		try {
+			$stripe_subscription = Stripe_Subscription::retrieve(
+				array(
+					'id' => $subscription->get_subscription_transaction_id(),
+					'expand' => array( 'latest_invoice' ),
+				)
+			);
+		} catch ( \Throwable $e ) {
+			// Assume no subscription found.
+			return $e->getMessage();
+		} catch ( \Exception $e ) {
+			// Assume no subscription found.
+			return $e->getMessage();
+		}
+
+		if ( ! empty( $stripe_subscription ) ) {
+			$update_array = array(
+				'startdate' => date( 'Y-m-d H:i:s', intval( $stripe_subscription->created ) ),
+			);
+			if ( in_array( $stripe_subscription->status, array( 'trialing', 'active', 'past_due' ) ) ) {
+				// Subscription is active.
+				$update_array['status'] = 'active';
+
+				// Get the next payment date. If the last invoice is not paid, that invoice date is the next payment date. Otherwise, the next payment date is the current_period_end.
+				if ( ! empty( $stripe_subscription->latest_invoice ) && empty( $stripe_subscription->latest_invoice->paid ) ) {
+					$update_array['next_payment_date'] = date( 'Y-m-d H:i:s', intval( $stripe_subscription->latest_invoice->period_end ) );
+				} else {
+					$update_array['next_payment_date'] = date( 'Y-m-d H:i:s', intval( $stripe_subscription->current_period_end ) );
+				}
+
+				// Get the billing amount and cycle.
+				if ( ! empty( $stripe_subscription->items->data[0]->price ) ) {
+					$stripe_subscription_price = $stripe_subscription->items->data[0]->price;
+					$update_array['billing_amount'] = $this->convert_unit_amount_to_price( $stripe_subscription_price->unit_amount );
+					$update_array['cycle_number']   = $stripe_subscription_price->recurring->interval_count;
+					$update_array['cycle_period']   = ucfirst( $stripe_subscription_price->recurring->interval );
+				}
+			} else {
+				// Subscription is no longer active.
+				$update_array['status'] = 'cancelled';
+				$update_array['enddate'] = date( 'Y-m-d H:i:s', intval( $stripe_subscription->ended_at ) );
+			}
+			$subscription->set( $update_array );
 		}
 	}
 
@@ -2759,6 +2847,10 @@ class PMProGateway_stripe extends PMProGateway {
 
 		$unit_amount = $this->convert_price_to_unit_amount( $amount );
 
+		if ( empty( $cycle_period ) ) {
+			$cycle_period = '';
+		}
+
 		$cycle_period = strtolower( $cycle_period );
 
 		// Only for use with Stripe Checkout.
@@ -3001,10 +3093,10 @@ class PMProGateway_stripe extends PMProGateway {
 	 * @since 3.0 Updated to private non-static.
 	 */
 	private function get_webhooks( $limit = 10 ) {
-			if ( ! class_exists( 'Stripe\WebhookEndpoint' ) ) {
-				// Couldn't load library.
-				return false;
-			}
+		if ( ! class_exists( 'Stripe\WebhookEndpoint' ) ) {
+			// Couldn't load library.
+			return false;
+		}
 
 		try {
 			$webhooks = Stripe_Webhook::all( [ 'limit' => apply_filters( 'pmpro_stripe_webhook_retrieve_limit', $limit ) ] );
@@ -3292,6 +3384,30 @@ class PMProGateway_stripe extends PMProGateway {
 	}
 
 	/**
+	 * Cancels a subscription in Stripe.
+	 *
+	 * @param PMPro_Subscription $subscription to cancel.
+	 */
+	function cancel_subscription( $subscription ) {
+		try {
+			$stripe_subscription = Stripe_Subscription::retrieve( $subscription->get_subscription_transaction_id() );
+		} catch ( \Throwable $e ) {
+			//assume no subscription found
+			return false;
+		} catch ( \Exception $e ) {
+			//assume no subscription found
+			return false;
+		}
+
+		$success = false;
+		if ( $this->cancelSubscriptionAtGateway( $stripe_subscription ) ) {
+			$success = true;
+		}
+		$this->update_subscription_info( $subscription );
+		return $success;
+	}
+
+	/**
 	 * Helper method to cancel a subscription at Stripe and also clear up any upaid invoices.
 	 *
 	 * @since 1.8
@@ -3464,7 +3580,7 @@ class PMProGateway_stripe extends PMProGateway {
 	/**
  	 * Register domain with Apple Pay.
  	 *
- 	 * @since 2.4
+	 * @since 2.4
 	 * @since 2.7 Deprecated for public use.
 	 * @since 3.0 Updated to private non-static.
  	 */
@@ -3483,7 +3599,7 @@ class PMProGateway_stripe extends PMProGateway {
 	/**
  	 * See if domain is registered with Apple Pay.
  	 *
- 	 * @since 2.4
+	 * @since 2.4
 	 * @since 2.7 Deprecated for public use.
 	 * @since 3.0 Updated to private non-static.
  	 */

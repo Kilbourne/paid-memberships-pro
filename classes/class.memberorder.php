@@ -289,6 +289,11 @@
 				} else {
 					$morder = $this->getMemberOrderByCode( $id );
 				}
+
+				// If we found an order, create a subscription if needed.
+				if ( ! empty( $this->id ) ) {
+					$this->get_subscription();
+				}
 			} else {
 				$morder = $this->getEmptyMemberOrder();	//blank constructor
 			}
@@ -629,14 +634,14 @@
 			}
 
 			if ( ! $return_count ) {
-			// Handle the order of data.
-			$sql_query .= ' ORDER BY ' . $orderby;
+				// Handle the order of data.
+				$sql_query .= ' ORDER BY ' . $orderby;
 
-			// Maybe limit the data.
-			if ( $limit ) {
-				$sql_query .= ' LIMIT %d';
-				$prepared[] = $limit;
-			}
+				// Maybe limit the data.
+				if ( $limit ) {
+					$sql_query .= ' LIMIT %d';
+					$prepared[] = $limit;
+				}
 			}
 
 			// Maybe prepare the query.
@@ -1039,6 +1044,13 @@
 			//filter @since v1.7.14
 			$this->discount_code = apply_filters("pmpro_order_discount_code", $this->discount_code, $this);
 
+			/**
+			 * Special case. We want to add `discount_code_id` as a property/db column in the future.
+			 * For now, save the discount code ID as a property on the order object.
+			 *
+			 * @DISCOUNT_CODE_ID_TODO
+			 */
+			$this->discount_code_id = ! empty( $this->discount_code ) ? $this->discount_code->id : 0;
 			return $this->discount_code;
 		}
 
@@ -1175,20 +1187,10 @@
 		 * @param bool $force If true, it will reset the property.
 		 *
 		 */
-		function getMembershipLevelAtCheckout($force = false) {
-			global $pmpro_level;
-
-			if( ! empty( $this->membership_level ) && empty( $force ) ) {
-				return $this->membership_level;
+		function getMembershipLevelAtCheckout($force = false) {			
+			if ( empty( $this->membership_level ) || $force ) {
+				$this->membership_level = pmpro_getLevelAtCheckout( empty( $this->membership_id ) ? null : $this->membership_id );
 			}
-			
-			// If for some reason, we haven't setup pmpro_level yet, do that.
-			if ( empty( $pmpro_level ) ) {
-				$pmpro_level = pmpro_getLevelAtCheckout();
-			}
-			
-			// Set the level to the checkout level global.
-			$this->membership_level = $pmpro_level;
 			
 			// Fix the membership level id.
 			if(!empty( $this->membership_level) && !empty($this->membership_level->level_id)) {
@@ -1310,26 +1312,13 @@
 		 */
 		function saveOrder()
 		{
-			global $current_user, $wpdb, $pmpro_checkout_id;
+			global $wpdb;
 
 			// Perform calculations before each order save.
 			//get a random code to use for the public ID
 			if(empty($this->code))
 				$this->code = $this->getRandomCode();
 
-			
-			//these fix some warnings/notices
-			if(empty($this->billing))
-			{
-				$this->billing = new stdClass();
-				$this->billing->name = $this->billing->street = $this->billing->city = $this->billing->state = $this->billing->zip = $this->billing->country = $this->billing->phone = "";
-			}
-
-			if(empty($this->gateway))
-				$this->gateway = get_option("pmpro_gateway");
-			if(empty($this->gateway_environment))
-				$this->gateway_environment = get_option("pmpro_gateway_environment");
-			
 			// Calculate datetime/timestamp. Datetime is what actually gets saved.
 			if( empty( $this->datetime ) && empty( $this->timestamp ) ) {
 				$this->timestamp = time();
@@ -1339,13 +1328,17 @@
 			} elseif( empty( $this->datetime ) && ! empty( $this->timestamp ) ) {
 				$this->datetime = $this->timestamp;		//must have a datetime in it
 				$this->timestamp = strtotime( $this->datetime );	//fixing the timestamp
-			}				
+			}
 
 			// Calculate checkout_id if necessary.
 			if(empty($this->checkout_id) || intval($this->checkout_id)<1) {
 				$highestval = $wpdb->get_var("SELECT MAX(checkout_id) FROM $wpdb->pmpro_membership_orders");
 				$this->checkout_id = intval($highestval)+1;
-				$pmpro_checkout_id = $this->checkout_id;
+			}
+
+			// Deprecating cancelled status with subscriptions table update. Change to success.
+			if ( $this->status == 'cancelled' ) {
+				$this->status = 'success';
 			}
 
 			//build query
@@ -1457,7 +1450,28 @@
 			{
 				if(empty($this->id))
 					$this->id = $wpdb->insert_id;
+
+				/**
+				 * Special case. We want to add `discount_code_id` as a property/db column in the future.
+				 * For now, if we are saving an order with a non-null discount_code_id property,
+				 * call updateDiscountCode to save the discount code use in the current pmpro_discount_codes_uses table.
+				 *
+				 * @DISCOUNT_CODE_ID_TODO
+				 */
+				if ( null !== $this->discount_code_id ) {
+					$this->updateDiscountCode( $this->discount_code_id );
+				}
+
 				do_action($after_action, $this);
+
+				// Create a subscription if we need to.
+				$subscription = $this->get_subscription();
+
+				// Check if the subscription has reached its billing limit.
+				if ( ! empty( $subscription ) && 'active' === $subscription->get_status() && $subscription->billing_limit_reached() ) {
+					// Cancel the subscription.
+					$subscription->cancel_at_gateway();
+				}
 
 				//Lets only run this once the update has been run successfully.
 				if ( $this->status !== $this->original_status ) {
@@ -1574,65 +1588,10 @@
 			$subscription = $this->get_subscription();
 			if ( empty( $subscription ) ) {
 				return true;
-			} else {
-				//get some data
-				$order_user = get_userdata($this->user_id);
-
-				//cancel orders for the same subscription
-				//Note: We do this early to avoid race conditions if and when the
-				//gateway send the cancel webhook after cancelling the subscription.				
-				$sqlQuery = $wpdb->prepare(
-					"UPDATE $wpdb->pmpro_membership_orders 
-						SET `status` = 'cancelled' 
-						WHERE user_id = %d 
-							AND membership_id = %d 
-							AND gateway = %s 
-							AND gateway_environment = %s 
-							AND subscription_transaction_id = %s 
-							AND `status` IN('success', '') ",					
-					$this->user_id,
-					$this->membership_id,
-					$this->gateway,
-					$this->gateway_environment,
-					$this->subscription_transaction_id
-				);
-				do_action('pmpro_update_order', $this);
-				$wpdb->query($sqlQuery);
-				do_action('pmpro_updated_order', $this);
-				
-				//cancel the gateway subscription first
-				if (is_object($this->Gateway)) {
-					$result = $this->Gateway->cancel( $this );
-				} else {
-					$result = false;
-				}
-
-				if($result == false) {
-					//there was an error, but cancel the order no matter what
-					$this->updateStatus("cancelled");
-
-					//we should probably notify the admin
-					$pmproemail = new PMProEmail();
-					$pmproemail->template = "subscription_cancel_error";
-					$pmproemail->data = array("body"=>"<p>" . sprintf(__("There was an error canceling the subscription for user with ID=%s. You will want to check your payment gateway to see if their subscription is still active.", 'paid-memberships-pro' ), strval($this->user_id)) . "</p><p>Error: " . $this->error . "</p>");
-					$pmproemail->data["body"] .= '<p>' . __('User Email', 'paid-memberships-pro') . ': ' . $order_user->user_email . '</p>';
-					$pmproemail->data["body"] .= '<p>' . __('Username', 'paid-memberships-pro') . ': ' . $order_user->user_login . '</p>';
-					$pmproemail->data["body"] .= '<p>' . __('User Display Name', 'paid-memberships-pro') . ': ' . $order_user->display_name . '</p>';
-					$pmproemail->data["body"] .= '<p>' . __('Order', 'paid-memberships-pro') . ': ' . $this->code . '</p>';
-					$pmproemail->data["body"] .= '<p>' . __('Gateway', 'paid-memberships-pro') . ': ' . $this->gateway . '</p>';
-					$pmproemail->data["body"] .= '<p>' . __('Subscription Transaction ID', 'paid-memberships-pro') . ': ' . $this->subscription_transaction_id . '</p>';
-					$pmproemail->data["body"] .= '<hr />';
-					$pmproemail->data["body"] .= '<p>' . __('Edit User', 'paid-memberships-pro') . ': ' . esc_url( add_query_arg( 'user_id', $this->user_id, self_admin_url( 'user-edit.php' ) ) ) . '</p>';
-					$pmproemail->data["body"] .= '<p>' . __('Edit Order', 'paid-memberships-pro') . ': ' . esc_url( add_query_arg( array( 'page' => 'pmpro-orders', 'order' => $this->id ), admin_url('admin.php' ) ) ) . '</p>';
-					$pmproemail->sendEmail(get_bloginfo("admin_email"));
-				} else {
-					//Note: status would have been set to cancelled by the gateway class. So we don't have to update it here.
-
-					//remove billing numbers in pmpro_memberships_users if the membership is still active					
-					$sqlQuery = $wpdb->prepare( "UPDATE $wpdb->pmpro_memberships_users SET initial_payment = 0, billing_amount = 0, cycle_number = 0 WHERE user_id = %d AND membership_id = %d AND status = 'active'", $this->user_id, $this->membership_id );
-					$wpdb->query($sqlQuery);
-				}
 			}
+
+			// Cancel the subscription.
+			return $subscription->cancel_at_gateway();
 		}
 
 		/**
